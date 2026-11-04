@@ -55,7 +55,11 @@ for (const [id, d] of Object.entries(sc)) for (const [key, v] of Object.entries(
 await send({ t: 'crown', id: 'yellow' });
 await wait(600);
 
-await page.click('[data-act="tab"][data-tab="score"]'); await wait(600);
+await page.click('[data-act="tab"][data-tab="score"]'); await page.click('[data-act="me"][data-id="red"]'); await wait(600);
+await shot('myscore');
+await page.click('[data-act="cell"][data-id="red"][data-key="animal"]'); await wait(300);
+await shot('keypad');
+await page.click('.sheet [data-act="k"][data-k="ok"]'); await page.click('[data-act="view"][data-v="all"]'); await wait(600);
 await shot('score');
 await page.click('[data-act="tab"][data-tab="mvp"]'); await wait(800);
 await shot('results');
@@ -69,6 +73,8 @@ await page.goto(api('/guide')); await wait(1500);
 await shot('guide');
 await page.goto(api('/guide#faq')); await wait(1000);
 await shot('faq');
+await page.goto(api('/cards')); await page.waitForSelector('.oc'); await page.fill('#q', '39'); await wait(300);
+await shot('cards');
 await page.goto(api('/')); await page.waitForSelector('.lobby'); await wait(1000);
 await shot('landing');
 await page.click('.cfab'); await page.click('.csug button:nth-of-type(2)');

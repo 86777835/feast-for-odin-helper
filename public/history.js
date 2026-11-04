@@ -15,7 +15,7 @@ function game(g) {
   const ps = g.players;
   const max = Math.max(1, ...ps.map(p => CATS.reduce((a, c) => a + Math.max(0, p[c.k]), 0)));
   return `<details class="card game">
-    <summary><div class="gh"><b>${esc(g.code)}</b><span>${when(g.ended)} · ${ps.length} 人${g.rounds === 7 ? '标准局' : '快速局'}</span></div>
+    <summary><div class="gh"><b>${esc(g.code)}</b><span>${when(g.ended)} · ${ps.length} 人${g.rounds === 7 ? '标准局' : '快速局'}${g.nor ? ' · 挪威扩展' : ''}</span></div>
       <div class="gp">${ps.map(p => `<span class="${p.place === 1 ? 'win' : ''}">${por(p, 'xs')}<i>${esc(pname(p))}</i><em>${p.total}</em></span>`).join('')}</div></summary>
     <div class="gd rk">${ps.map(p => `
       <div class="row"><div class="stepn">${p.place}</div>${por(p, 'sm')}
@@ -39,5 +39,24 @@ async function load(q) {
   }
 }
 
-document.getElementById('search').addEventListener('submit', e => { e.preventDefault(); load(document.getElementById('q').value.trim()); });
+// Score references; with a searched name, that player's own best and average per configuration.
+async function stats(name) {
+  const box = document.getElementById('stats');
+  try {
+    const r = await fetch('/api/stats' + (name ? '?name=' + encodeURIComponent(name) : ''));
+    if (!r.ok) throw new Error(r.status);
+    const list = await r.json();
+    const mine = name && list.some(g => g.me.games);
+    box.innerHTML = list.length ? `<table class="st"><thead><tr><th>配置</th><th>局数</th><th>平均分</th><th>冠军平均</th><th>最高分</th>${mine ? `<th>${esc(name)}</th>` : ''}</tr></thead><tbody>${list.map(g => `
+      <tr><td>${g.n} 人${g.rounds === 7 ? '标准' : '快速'}${g.nor ? '<small>挪威扩展</small>' : ''}</td><td>${g.games}</td><td>${g.avg}</td><td>${g.avgWin}</td>
+        <td><b>${g.best.total}</b><small>${esc(g.best.name || COLOR_ZH[g.best.id] + '玩家')}</small></td>
+        ${mine ? `<td>${g.me.games ? `最高 <b>${g.me.best}</b><small>平均 ${g.me.avg} · ${g.me.games} 局</small>` : '—'}</td>` : ''}</tr>`).join('')}</tbody></table>
+      ${name && !mine ? `<p class="note">没有名为「${esc(name)}」的玩家记录；个人成绩按玩家名完全一致统计。</p>` : ''}` : '<div class="empty">暂无记录</div>';
+  } catch {
+    box.innerHTML = '<div class="empty">加载失败，请稍后重试</div>';
+  }
+}
+
+document.getElementById('search').addEventListener('submit', e => { e.preventDefault(); const q = document.getElementById('q').value.trim(); load(q); stats(q); });
 load('');
+stats('');

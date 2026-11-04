@@ -46,6 +46,9 @@ eq('short game recorded', g?.rounds, 6);
 eq('search by player name', (await games(name)).some(x => x.gid === g.gid), true);
 eq('search by color', (await games({ red: '红', blue: '蓝', yellow: '黄', black: '黑' }[p2])).some(x => x.gid === g.gid), true);
 eq('search miss', (await games('不存在的玩家xyz')).length, 0);
+const stats = async name => (await fetch(api('/api/stats' + (name ? '?name=' + encodeURIComponent(name) : '')))).json();
+{ const g2 = (await stats(name)).find(x => x.n === 2 && x.rounds === 6);
+  eq('stats: 2-player short game group has this player', [g2?.games >= 1, g2?.me], [true, { games: 1, best: 30, avg: 30 }]); }
 
 const b = await chromium.launch({ channel: 'chrome' });
 const page = await (await b.newContext({ viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
@@ -53,6 +56,7 @@ const errs = []; page.on('pageerror', e => errs.push(e.message));
 await page.goto(base); await page.click('a[href="history"]'); await page.waitForSelector('.game');
 await page.fill('#q', name); await page.click('#search button'); await wait(600);
 eq('history page search shows 1 game', await page.$$eval('.game', x => x.length), 1);
+eq('score references show this player', (await page.textContent('.st')).includes('最高 30'), true);
 eq('summary winner score', await page.textContent('.game .gp .win em'), '30');
 eq('summary says short game', (await page.textContent('.game .gh span')).includes('2 人快速局'), true);
 await page.screenshot({ path: out + '/h_list.png' });
@@ -80,6 +84,14 @@ const bottom = Math.max(...await Promise.all(['[data-act="create"]', '[data-act=
 eq('create/join/history on first screen', bottom <= 667, true);
 console.log('rooms listed:', await page.$$eval('.lobby', x => x.length), 'lowest button bottom:', Math.round(bottom));
 await page.screenshot({ path: out + '/h_landing.png' });
+// occupation lookup
+await page.goto(api('/cards')); await page.waitForSelector('.oc');
+eq('all 190 cards loaded (80 shown first)', [await page.$$eval('.oc', c => c.length), (await page.textContent('.cards')).includes('还有 110 张')], [80, true]);
+await page.fill('#q', '39'); await wait(200);
+eq('number search finds 39C', await page.$$eval('.oc .no', c => c.map(x => x.textContent)), ['39C']);
+await page.fill('#q', ''); await page.click('[data-f="banned"]'); await wait(200);
+eq('8 cards banned with the Norwegians', await page.$$eval('.oc', c => c.length), 8);
+await page.screenshot({ path: out + '/h_cards.png' });
 eq('no page errors', errs, []);
 await b.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASS');

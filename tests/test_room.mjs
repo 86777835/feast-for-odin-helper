@@ -84,11 +84,20 @@ await shot(B, '04_over');
 // scoring with the keypad: A fills red, B fills black and yellow
 const keyIn = async (p, id, key, seq) => {
   await p.click(`[data-act="cell"][data-id="${id}"][data-key="${key}"]`);
-  for (const k of seq) await p.click(`[data-act="k"][data-k="${k}"]`);
+  for (const k of seq) await p.click(k[0] === 'q' ? `[data-act="q"][data-v="${k.slice(1)}"]` : `[data-act="k"][data-k="${k}"]`);
   await wait(250);
 };
+// A scores only itself (red) in "my scoring"; B fills the other two columns in the full table
 await A.click('[data-act="tab"][data-tab="score"]'); await B.click('[data-act="tab"][data-tab="score"]');
-await keyIn(A, 'red', 'ship', ['3', '+', '5', '+', '8', 'ok']);          // 16
+eq('A asked who it is', (await A.textContent('h2.h')).includes('你是哪位玩家'), true);
+await A.click('[data-act="me"][data-id="red"]'); await B.click('[data-act="view"][data-v="all"]'); await wait(200);
+eq('my scoring shows only red', await A.$$eval('[data-act="cell"]', c => [...new Set(c.map(x => x.dataset.id))]), ['red']);
+await keyIn(A, 'red', 'ship', ['q3', 'q5', 'q8', 'ok']);                // 16 via quick-add buttons
+eq('quick-add terms', (await A.textContent('[data-k="ms-ship"] .ms-ex')).trim(), '3 + 5 + 8');
+await keyIn(A, 'red', 'animal', ['5', 'ok']);
+eq('impossible animal value flagged', (await A.textContent('[data-k="ms-animal"] .ms-w')).includes('只能是 2、3、4'), true);
+await keyIn(A, 'red', 'animal', ['clr', 'ok']);
+eq('flag gone after fixing', await A.$('[data-k="ms-animal"] .ms-w'), null);
 await keyIn(A, 'red', 'expl', ['1', '6', 'ok']);                         // 16
 await keyIn(A, 'red', 'house', ['1', '7', 'ok']);                        // 17
 await keyIn(A, 'red', 'job', ['2', '+', '3', '-', '1', 'ok']);           // 4
@@ -107,6 +116,10 @@ await keyIn(B, 'yellow', 'silver', ['2', '0', 'ok']);                     // 20
 await keyIn(B, 'yellow', 'mHouse', ['2', 'ok']);                          // −2   → 52
 await B.click('[data-act="crown"][data-id="yellow"]'); await wait(300);  // crown moves: black 47, yellow 54
 await wait(300);
+await keyIn(B, 'yellow', 'income', ['4', 'ok']); eq('final income reminder in the full table', (await B.textContent('.note')).includes('没有领成银币'), true);
+await keyIn(B, 'yellow', 'income', ['clr', 'ok']);
+eq('my total shown on A', (await A.textContent('.ms-tot b')).trim(), '58');
+await A.click('[data-act="view"][data-v="all"]'); await wait(200);
 const rowTotals = async p => Object.fromEntries(await p.$$eval('td.tt', ts => ts.map(t => [t.dataset.tt, t.textContent])));
 eq('totals same on both phones', await rowTotals(A), await rowTotals(B));
 { const t = await rowTotals(B); eq('totals', [t.red, t.black, t.yellow], ['58', '47', '54']); }

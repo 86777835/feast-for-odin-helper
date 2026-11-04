@@ -26,6 +26,7 @@ export default {
     }
     if (url.pathname === '/api/rooms' && req.method === 'GET') return lobby(env).fetch('https://lobby/list');
     if (url.pathname === '/api/games' && req.method === 'GET') return archive(env).fetch('https://archive/list' + url.search);
+    if (url.pathname === '/api/stats' && req.method === 'GET') return archive(env).fetch('https://archive/stats' + url.search);
 
     const m = url.pathname.match(/^\/api\/room\/([A-Z0-9]{4})\/ws$/);
     if (m) {
@@ -73,7 +74,7 @@ const CHAT_SYSTEM = `你是「奥丁规则助手」，帮玩家解答桌游《�
 - 与本游戏无关的问题，礼貌说明你只解答《奥丁的盛宴》的规则。
 - 用简体中文，简短直接：先给结论，再补一两句理由或例子。可以用短列表，不要用表格和标题。
 
-本网站怎么用：一桌人进同一个房间，手机实时同步。开局选人数（1–4 人）、标准模式 7 轮或快速模式 6 轮、名字和颜色，按顺时针排座位，可以随机抽起始玩家；「流程」页按 12 个阶段逐步提示每一轮该做什么，在「决定起始玩家」阶段点选最后放维京人的玩家，点错可以撤销；「计分」页按规则书计分项逐项填，船只、移民、探索版图、工棚和房屋、羊和牛、职业卡牌可以输入算式，扣分项填正数；「结算」页显示排名、得分构成和成就，同分并列获胜，可以改玩家名、保存结算长图。
+本网站怎么用：一桌人进同一个房间，手机实时同步。开局选人数（1–4 人）、标准模式 7 轮或快速模式 6 轮、是否用挪威扩展、是否用停手顺序轮序（3 人以上），再填名字、选颜色，按顺时针排座位，可以随机抽起始玩家。「流程」页按 12 个阶段逐步提示每一轮该做什么：在「决定起始玩家」阶段点选最后放维京人的玩家；开了停手顺序轮序时，在行动阶段按先后点停手的人，下一轮顺序自动排好；点错可以撤销。「计分」页有「我的计分」（每人选好自己是谁，只填自己的分数，有快捷按钮，填了不可能的分值会提醒）和「全桌总览」（整张表，可以替没手机的人代填）。「结算」页显示排名、得分构成和成就，同分并列获胜，可以改玩家名、保存结算长图。「往期对局」可以搜索，还有按人数和局长统计的成绩参照。
 
 # 讲解稿
 ${GUIDE}
@@ -214,6 +215,7 @@ export class Archive extends DurableObject {
       return new Response('ok');
     }
     if (url.pathname === '/del') { await this.ctx.storage.delete('g:' + await req.text()); return new Response('ok'); }
+    if (url.pathname === '/stats') return Response.json(await this.stats((url.searchParams.get('name') || '').trim().toLowerCase()));
     // list: newest first, optionally filtered by room code, player name or color name; searches the latest 1000 games
     const q = (url.searchParams.get('q') || '').trim().toLowerCase();
     const all = await this.ctx.storage.list({ prefix: 'g:', reverse: true, limit: 1000 });
@@ -223,6 +225,29 @@ export class Archive extends DurableObject {
       if (out.length >= 50) break;
     }
     return Response.json(out);
+  }
+
+  // Score references per player count × game length over the latest 1000 games: average score, average winning score, best score;
+  // with a player name, that player's own games, best and average too.
+  async stats(name) {
+    const all = await this.ctx.storage.list({ prefix: 'g:', reverse: true, limit: 1000 });
+    const groups = {};
+    const avg = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : null;
+    for (const g of all.values()) {
+      const k = `${g.players.length}-${g.rounds}-${!!g.nor}`;
+      const G = groups[k] ||= { n: g.players.length, rounds: g.rounds, nor: !!g.nor, games: 0, all: [], wins: [], best: null, mine: [] };
+      G.games++;
+      for (const p of g.players) {
+        G.all.push(p.total);
+        if (p.place === 1) G.wins.push(p.total);
+        if (!G.best || p.total > G.best.total) G.best = { total: p.total, name: p.name, id: p.id, ended: g.ended };
+        if (name && p.name.toLowerCase() === name) G.mine.push(p.total);
+      }
+    }
+    return Object.values(groups).sort((a, b) => a.n - b.n || b.rounds - a.rounds || a.nor - b.nor).map(G => ({
+      n: G.n, rounds: G.rounds, nor: G.nor, games: G.games, avg: avg(G.all), avgWin: avg(G.wins), best: G.best,
+      me: name ? { games: G.mine.length, best: G.mine.length ? Math.max(...G.mine) : null, avg: avg(G.mine) } : null
+    }));
   }
 }
 

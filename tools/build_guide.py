@@ -3,7 +3,10 @@
 # One section per "## title" in 讲解稿.md, its bullets as points, and the picture public/guide/NN.jpg.
 import re, html, sys, json
 src, out, faq_src = sys.argv[1], sys.argv[2], sys.argv[3]
-SRC = {'rb': ('规则书', 'https://boardgamegeek.com/filepage/136602/english-rulebook')}
+SRC = {'rb': ('规则书', 'https://boardgamegeek.com/filepage/136602/english-rulebook'),
+       'nw': ('挪威扩展规则书', 'https://www.feuerland-spiele.de/fileadmin/game/Ein_Fest_fuer_Odin/Exp_1_Die_Norweger/Regelbuch.pdf'),
+       'me2': ('迷你扩展 2 规则', 'https://www.feuerland-spiele.de/fileadmin/game/Ein_Fest_fuer_Odin/Mini_Erweiterung_2_Ernte_.pdf'),
+       'gb': ('扩展设计师在 BGG 的说明', 'https://boardgamegeek.com/thread/3411621/article/45242082')}
 faq = json.load(open(faq_src))
 cats = list(dict.fromkeys(f['cat'] for f in faq))
 faq_html = ''.join(f'<h3 class="fq-cat">{html.escape(c)}</h3>' + ''.join(
@@ -39,7 +42,7 @@ open(out, 'w').write(f'''<!doctype html>
 <h2 class="h">图文讲解<small>{len(secs)} 节</small></h2>
 <nav class="toc">{toc}</nav>
 {body}<h2 class="h" id="faq">常见问题<small>{len(faq)} 条</small></h2>
-<p class="note">以下依据官方规则书整理，并非官方 FAQ，点开查看答案。具体某张职业卡的效果，请查规则书附录。</p>
+<p class="note">以下依据官方规则书（挪威扩展部分依据 Feuerland 德文规则书）整理，并非官方 FAQ，点开查看答案。</p>
 {faq_html}
 <a class="btn" href="./">返回首页</a>
 <footer>依据 Z-Man Games 英文版官方规则书 · 插图为原创 · 非官方玩家工具</footer>

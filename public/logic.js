@@ -36,6 +36,7 @@ export function initialState() {
     v: 0, stage: 'setup', n: 4, rounds: 7,
     players: COLOR_ORDER.map(c => ({ id: c, name: '' })),
     start: 'red', round: 1, phase: 1, picked: 0, firsts: [], back: [],
+    nor: false, passOrder: false, order: [], passed: [], nextOrder: [],   // Norwegians expansion; pass-order turn order variant
     score: {}, crown: null
   };
 }
@@ -50,10 +51,17 @@ export function num(v, min = 0) {
 const clone = o => JSON.parse(JSON.stringify(o));
 export const seated = S => S.players.slice(0, S.n);
 // Clockwise from the start player: the order in which players place Vikings.
-export const turnOrder = S => { const s = seated(S), i = Math.max(0, s.findIndex(p => p.id === S.start)); return [...s.slice(i), ...s.slice(0, i)].map(p => p.id); };
+const clockwise = S => { const s = seated(S), i = Math.max(0, s.findIndex(p => p.id === S.start)); return [...s.slice(i), ...s.slice(0, i)].map(p => p.id); };
+// With the pass-order variant (expansion designer's rule, official in The Danes) the order is kept explicitly:
+// the start player first, then the others in reverse order of passing.
+export const usesPassOrder = S => S.passOrder && S.n >= 3;
+export const turnOrder = S => usesPassOrder(S) && S.stage !== 'setup' && S.order?.length === S.n ? S.order : clockwise(S);
+// Phase 6 happens this round and the variant is on: passes must be recorded in phase 5.
+export const recordsPasses = S => usesPassOrder(S) && activePhases(S.round, S.rounds, S.n).includes(6);
 const cleanText = (v, max) => String(v ?? '').replace(/[\u0000-\u001f]/g, '').slice(0, max);
 const BACK_MAX = 40;   // undo steps kept
-const flow = S => ({ stage: S.stage, round: S.round, phase: S.phase, start: S.start, picked: S.picked, firsts: S.firsts });
+const flow = S => ({ stage: S.stage, round: S.round, phase: S.phase, start: S.start, picked: S.picked, firsts: S.firsts,
+  order: S.order, passed: S.passed, nextOrder: S.nextOrder });
 
 // Applies one action. Returns the new state, or null when the action is invalid or stale.
 export function reduce(s, a) {
@@ -86,6 +94,10 @@ export function reduce(s, a) {
       return done();
     }
 
+    case 'opt':     // setup: Norwegians expansion on/off, pass-order variant on/off
+      if (S.stage !== 'setup' || !['nor', 'passOrder'].includes(a.key) || typeof a.on !== 'boolean') return null;
+      S[a.key] = a.on; return done();
+
     case 'move': {
       const { i, j } = a;
       if (S.stage !== 'setup' || ![i, j].every(k => Number.isInteger(k) && k >= 0 && k < S.n)) return null;
@@ -106,25 +118,37 @@ export function reduce(s, a) {
     case 'begin':
       if (S.stage !== 'setup') return null;
       Object.assign(S, { stage: 'play', gid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),   // names this game in the archive
-        round: 1, phase: 1, picked: 0, firsts: [S.start], back: [], score: {}, crown: null });
+        round: 1, phase: 1, picked: 0, firsts: [S.start], back: [], score: {}, crown: null, passed: [], nextOrder: [] });
+      S.order = clockwise(S);   // round 1: clockwise from the random start player
       return done();
 
     case 'next': {
       // round/phase guard: a stale phone (or a double tap) cannot skip a phase.
       if (S.stage !== 'play' || a.round !== S.round || a.phase !== S.phase) return null;
       if (S.phase === 6 && S.picked !== S.round) return null;   // say who becomes start player first
+      if (S.phase === 5 && recordsPasses(S) && S.passed.length !== S.n) return null;   // record every pass first
       S.back = [...S.back.slice(1 - BACK_MAX), flow(s)];
+      if (S.phase === 5 && recordsPasses(S)) {   // the last to pass placed Vikings last: start player; the rest in reverse pass order
+        S.start = S.passed.at(-1); S.picked = S.round; S.nextOrder = S.passed.slice().reverse();
+      }
       const act = activePhases(S.round, S.rounds, S.n);
       const after = act.find(k => k > S.phase);
       if (after) { S.phase = after; return done(); }
       if (S.round === S.rounds) { S.stage = 'over'; return done(); }
       S.round += 1; S.phase = activePhases(S.round, S.rounds, S.n)[0];
       S.firsts = [...S.firsts, S.start];
+      S.order = usesPassOrder(S) ? S.nextOrder : clockwise(S); S.passed = []; S.nextOrder = [];
       return done();
     }
 
+    case 'pass':    // pass-order variant, phase 5: this player has passed (stopped placing Vikings)
+      if (S.stage !== 'play' || S.phase !== 5 || a.round !== S.round || !recordsPasses(S) || !ids().includes(a.id) || S.passed.includes(a.id)) return null;
+      S.back = [...S.back.slice(1 - BACK_MAX), flow(s)];
+      S.passed = [...S.passed, a.id];
+      return done();
+
     case 'pick':    // phase 6: the player who placed Vikings last becomes start player
-      if (S.stage !== 'play' || S.phase !== 6 || a.round !== S.round || !ids().includes(a.id)) return null;
+      if (S.stage !== 'play' || S.phase !== 6 || a.round !== S.round || !ids().includes(a.id) || usesPassOrder(S)) return null;
       if (S.picked !== S.round) S.back = [...S.back.slice(1 - BACK_MAX), flow(s)];
       S.start = a.id; S.picked = S.round;
       return done();
@@ -150,7 +174,7 @@ export function reduce(s, a) {
       S.crown = a.id; return done();
 
     case 'reset':
-      Object.assign(S, { stage: 'setup', round: 1, phase: 1, picked: 0, firsts: [], back: [], score: {}, crown: null });
+      Object.assign(S, { stage: 'setup', round: 1, phase: 1, picked: 0, firsts: [], back: [], score: {}, crown: null, order: [], passed: [], nextOrder: [] });
       return done();
   }
   return null;
@@ -213,7 +237,7 @@ export function gameRecord(S) {
   const R = results(S);
   if (R.error) return null;
   return {
-    gid: S.gid, rounds: S.rounds,
+    gid: S.gid, rounds: S.rounds, nor: !!S.nor,
     players: R.rows.map(r => {
       const p = S.players.find(x => x.id === r.id);
       return { id: r.id, name: p.name, place: r.place, total: r.total, sea: r.sea, land: r.land, build: r.build, herd: r.herd, job: r.job, wealth: r.wealth, minus: r.minus };

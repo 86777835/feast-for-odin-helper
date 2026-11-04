@@ -1,4 +1,4 @@
-import { COLOR_ORDER, COLOR_ZH, PHASES, activePhases, turnOrder, num, parts, results, THING_PTS, CROWN_PTS } from './logic.js';
+import { COLOR_ORDER, COLOR_ZH, PHASES, activePhases, turnOrder, usesPassOrder, recordsPasses, num, parts, results, THING_PTS, CROWN_PTS } from './logic.js';
 import { phaseInfo } from './phases.js';
 
 const COLORS = { red: 'var(--p-red)', blue: 'var(--p-blue)', yellow: 'var(--p-yellow)', black: 'var(--p-black)' };
@@ -8,21 +8,43 @@ const CATS = [
   { k: 'job', n: '职业', c: 'var(--c-job)' }, { k: 'wealth', n: '财富', c: 'var(--c-wealth)' }
 ];
 // Score pad rows, top to bottom. list: one value per item; neg: points lost (typed as a positive number).
-const FIELD = {
-  ship: { n: '船只', hint: '港湾里的每艘船：捕鲸船 3 · 商船 5 · 长船 8（移民的船记在下一行）', list: true },
-  emig: { n: '移民', hint: '每艘移民船：商船 18 · 长船 21', list: true },
+// quick: keypad shortcut buttons; allow: the only values an item can have (anything else is flagged).
+const FIELD_BASE = {
+  ship: { n: '船只', hint: '港湾里的每艘船：捕鲸船 3 · 商船 5 · 长船 8。移民的船记在「移民」，这里不再算', list: true,
+    quick: [['捕鲸船', 3], ['商船', 5], ['长船', 8]], allow: [3, 5, 8] },
+  emig: { n: '移民', hint: '每艘移民船：商船 18 · 长船 21', list: true, quick: [['商船', 18], ['长船', 21]], allow: [18, 21] },
   expl: { n: '探索版图', hint: '每块已拿到的探索版图：右上角盾牌分值', list: true },
-  house: { n: '工棚房屋', hint: '工棚 8 · 石屋 10 · 长屋 17', list: true },
-  animal: { n: '羊和牛', hint: '羊 2（怀孕 3）· 牛 3（怀孕 4），逐只相加', list: true },
+  house: { n: '工棚房屋', hint: '工棚 8 · 石屋 10 · 长屋 17', list: true, quick: [['工棚', 8], ['石屋', 10], ['长屋', 17]], allow: [8, 10, 17] },
+  animal: { n: '羊和牛', hint: '只算畜栏里的：羊 2（怀孕 3）· 牛 3（怀孕 4），逐只相加', list: true,
+    quick: [['羊', 2], ['怀孕羊', 3], ['牛', 3], ['怀孕牛', 4]], allow: [2, 3, 4] },
   job: { n: '职业卡牌', hint: '每张已打出的职业卡牌：右上角分值（可为负数）', list: true },
   silver: { n: '银币', hint: '供应区的银币总数（放在版图和房屋上的不算）' },
-  income: { n: '最终收入', hint: '最后一轮的收入：若当时没有领成银币，记在这里' },
+  income: { n: '最终收入', hint: '最后一轮的收入：只有当时没领成银币才记在这里，否则会和「银币」重复计分' },
   crown: { n: '王冠', hint: '' },
   mHome: { n: '部落版图', hint: '部落版图上没盖住的负分格：扣分合计（填正数）', neg: true },
   mExpl: { n: '探索版图', hint: '探索版图上没盖住的负分格：扣分合计（填正数）', neg: true },
   mHouse: { n: '工棚房屋', hint: '工棚、石屋、长屋上没盖住的负分格：扣分合计（填正数）', neg: true },
   thing: { n: '庭之惩罚', hint: '庭之惩罚的个数（每个 −3）', neg: true }
 };
+// Values that cannot occur on the score pad (a ship is worth 3, 5 or 8, …), or an income that may be counted twice.
+function warnOf(id, key) {
+  const f = FIELD[key], d = (S.score[id] || {})[key];
+  if (f.allow && Array.isArray(d)) { const bad = d.filter(v => !f.allow.includes(v)); if (bad.length) return `${bad.join('、')} 不是有效的${f.n}分值（只能是 ${f.allow.join('、')}）`; }
+  if (key === 'income' && num(d) > 0) return '确认最后一轮的收入没有领成银币，否则不要再填这里';
+  return '';
+}
+// With the Norwegians (its rulebook p.6): horses and pigs count as animals, victory point tokens go with occupations,
+// the artisan shed with sheds and houses. Artisan shed and small emigration values are printed on their tiles, so not checked.
+const FIELD_NOR = {
+  ...FIELD_BASE,
+  emig: { ...FIELD_BASE.emig, hint: '每艘移民船：商船 18 · 长船 21；小移民（捕鲸船）按板块上印的分值', allow: null },
+  house: { ...FIELD_BASE.house, hint: '工棚 8 · 石屋 10 · 长屋 17，再加手工工棚的分值', allow: null },
+  animal: { n: '动物', hint: '只算畜栏和供应区里的：羊 2（怀孕 3）· 牛 3（怀孕 4）· 马 6（怀孕 8）· 猪 1', list: true,
+    quick: [['羊', 2], ['怀孕羊', 3], ['牛', 3], ['怀孕牛', 4], ['马', 6], ['怀孕马', 8], ['猪', 1]], allow: [1, 2, 3, 4, 6, 8] },
+  job: { ...FIELD_BASE.job, hint: '已打出的职业卡牌分值（可为负），再加胜利点标记 4/3/2', quick: [['胜利点', 2], ['胜利点', 3], ['胜利点', 4]] },
+  mHouse: { ...FIELD_BASE.mHouse, hint: '工棚、石屋、长屋和手工工棚上没盖住的负分格：扣分合计（填正数）' }
+};
+let FIELD = FIELD_BASE;
 const ROWS = ['ship', 'emig', 'expl', 'house', 'animal', 'job', 'silver', 'income', 'crown', 'mHome', 'mExpl', 'mHouse', 'thing'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -121,6 +143,7 @@ function morph(a, b) {
   while (a.childNodes.length > bc.length) a.removeChild(a.lastChild);
 }
 function render() {
+  FIELD = S?.nor ? FIELD_NOR : FIELD_BASE;
   const t = document.createElement('div');
   t.innerHTML = view();
   morph($('#app'), t);
@@ -165,7 +188,8 @@ function landing() {
     </div>
     <div class="tiles">
       <a class="card tile" href="guide"><span class="ti"><img src="img/rules-poster.jpg" alt=""></span><span><b>新手教程</b>图文 + 常见问题</span></a>
-      <a class="card tile" href="history"><span class="ti rec">录</span><span><b>往期对局</b>战绩查询</span></a>
+      <a class="card tile" href="history"><span class="ti rec">录</span><span><b>往期对局</b>战绩与成绩参照</span></a>
+      <a class="card tile wide" href="cards"><span class="ti rec">职</span><span><b>职业卡速查</b>按卡号或卡名查要点</span></a>
     </div>
     <h2 class="h">房间<small>${rooms && rooms.length ? `${rooms.length} 个` : ''}</small></h2>
     <div class="list">${roomList}</div>
@@ -179,6 +203,13 @@ function setupView() {
     <div class="chips">${[1, 2, 3, 4].map(k => `<button class="chip${k === S.n ? ' on' : ''}" data-act="n" data-n="${k}">${k} 人</button>`).join('')}</div>
     <h2 class="h">游戏长度</h2>
     <div class="chips">${[7, 6].map(k => `<button class="chip${k === S.rounds ? ' on' : ''}" data-act="rounds" data-r="${k}">${roundsName(k)}</button>`).join('')}</div>
+    <h2 class="h">规则选项</h2>
+    <div class="chips">
+      <button class="chip${S.nor ? ' on' : ''}" data-act="opt" data-key="nor" data-on="${!S.nor}">挪威扩展</button>
+      ${S.n >= 3 ? `<button class="chip${S.passOrder ? ' on' : ''}" data-act="opt" data-key="passOrder" data-on="${!S.passOrder}">停手顺序轮序</button>` : ''}
+    </div>
+    ${S.nor ? '<p class="note">挪威扩展：换用扩展的行动版图和探索版图，流程提示和计分表会加上马、猪、胜利点标记和手工工棚。</p>' : ''}
+    ${S.passOrder && S.n >= 3 ? '<p class="note">停手顺序轮序（扩展设计师的规则，《丹麦人》的正式规则）：最后停手的人当起始玩家，其余人按停手先后倒过来排，越早停手下一轮越晚行动。第 1 轮仍从起始玩家起顺时针。</p>' : ''}
     <h2 class="h">座位与颜色<small>按顺时针排列</small></h2>
     <div class="list">${S.players.slice(0, S.n).map((p, i) => `
       <div class="card row" data-k="seat-${i}">
@@ -221,50 +252,87 @@ function banner() {
 
 function flowTab() {
   const order = turnOrder(S);
-  const track = `<div class="track"><div class="t">${S.n > 1 ? '行动顺序 · 从起始玩家起顺时针' : '单人游戏'}</div><div class="slots">${order.map((id, i) => `
+  const track = `<div class="track"><div class="t">${S.n === 1 ? '单人游戏' : usesPassOrder(S) && S.round > 1 ? '行动顺序 · 按上一轮停手顺序' : '行动顺序 · 从起始玩家起顺时针'}</div><div class="slots">${order.map((id, i) => `
     <div class="slot" data-k="slot-${id}"><div class="o">${i + 1}</div>${por(id)}<div class="n">${esc(pname(id))}</div>${i === 0 && S.n > 1 ? '<span class="m">起始</span>' : ''}</div>`).join('')}</div></div>`;
   if (S.stage === 'over') return track + `<div class="btns"><button class="btn ghost" data-act="undo" ${S.back.length ? '' : 'disabled'}>撤销上一步</button><button class="btn ghost" data-act="reset">重新开局</button></div>`;
   const act = activePhases(S.round, S.rounds, S.n);
   const card = (p, open) => {
     const on = act.includes(p.k), cur = p.k === S.phase, done = on && p.k < S.phase;
-    const info = phaseInfo(p.k, S.round, S.rounds, S.n);
+    const info = phaseInfo(p.k, S.round, S.rounds, S.n, { nor: S.nor, passOrder: usesPassOrder(S) });
     return `<div class="card ph${cur ? ' cur' : ''}${done ? ' done' : ''}${on ? '' : ' off'}" data-k="ph-${p.k}${open ? '-open' : ''}">
       <div class="phh"><span class="phn">${p.k}</span><b>${p.n}</b><small>${on ? (done ? '已完成' : info.tag || '') : info.skip}</small></div>
-      ${open ? `<div class="phb">${info.html}${cur && p.k === 6 ? pickView() : ''}</div>` : ''}</div>`;
+      ${open ? `<div class="phb">${info.html}${cur && p.k === 5 && recordsPasses(S) ? passView() : ''}${cur && p.k === 6 ? (usesPassOrder(S) ? nextOrderView() : pickView()) : ''}</div>` : ''}</div>`;
   };
   const isLast = act.at(-1) === S.phase;
-  const need = S.phase === 6 && S.picked !== S.round;
+  const needPass = S.phase === 5 && recordsPasses(S) && S.passed.length < S.n;
+  const need = (S.phase === 6 && S.picked !== S.round) || needPass;
   const label = isLast ? (S.round === S.rounds ? '宴会结束，进入终局计分' : `本轮结束，进入第 ${S.round + 1} 轮`) : `完成「${PHASES.find(p => p.k === S.phase).n}」，下一阶段`;
   return `${track}
     <div class="phs">${card(PHASES.find(p => p.k === S.phase), true)}</div>
-    <button class="btn" data-act="next" ${need ? 'disabled' : ''}>${need ? '先选出新的起始玩家' : label}</button>
+    <button class="btn" data-act="next" ${need ? 'disabled' : ''}>${needPass ? '先按顺序点完所有人的停手' : need ? '先选出新的起始玩家' : label}</button>
     <div class="btns"><button class="btn ghost" data-act="undo" ${S.back.length ? '' : 'disabled'}>撤销上一步</button><button class="btn ghost" data-act="reset">重新开局</button></div>
     <h2 class="h">第 ${S.round} 轮的 12 个阶段<small><button class="tbh" data-act="all"><span>${ui.all ? '收起说明' : '展开说明'}</span></button></small></h2>
     <div class="phs">${PHASES.map(p => card(p, ui.all && act.includes(p.k))).join('')}</div>`;
 }
 
+function passView() {
+  return `<div class="pick">${turnOrder(S).map(id => { const k = S.passed.indexOf(id); return `<button class="${k >= 0 ? 'on' : ''}" data-act="pass" data-id="${id}" ${k >= 0 ? 'disabled' : ''}>${por(id, 'sm')}<span>${esc(pname(id))}${k >= 0 ? ` · 第 ${k + 1} 个停手` : ''}</span></button>`; }).join('')}</div>`;
+}
+function nextOrderView() {
+  return `<div class="pick">${S.nextOrder.map((id, i) => `<button class="${i === 0 ? 'on' : ''}" disabled>${por(id, 'sm')}<span>${i + 1}. ${esc(pname(id))}</span></button>`).join('')}</div>`;
+}
 function pickView() {
   return `<div class="pick">${turnOrder(S).map(id => `<button class="${S.picked === S.round && S.start === id ? 'on' : ''}" data-act="pick" data-id="${id}">${por(id, 'sm')}<span>${esc(pname(id))}</span></button>`).join('')}</div>`;
 }
 
+const meKey = () => `odin-me-${code}`;
+const myId = () => { const m = store.get(meKey()); return turnOrder(S).includes(m) ? m : null; };
+
 function scoreTab() {
-  const order = turnOrder(S);
-  const cell = (id, key) => {
-    if (key === 'crown') return `<button class="cell ${S.crown === id ? 'crown' : 'empty'}" data-act="crown" data-id="${id}">${S.crown === id ? `+${CROWN_PTS}` : '无'}</button>`;
-    const d = (S.score[id] || {})[key];
-    if (FIELD[key].list) { const t = (d || []).reduce((a, b) => a + b, 0); return `<button class="cell ${d && d.length ? '' : 'empty'}" data-act="cell" data-id="${id}" data-key="${key}">${d && d.length ? t : '加'}</button>`; }
-    const filled = d !== undefined && d !== '';
-    const bad = filled && num(d) === null;
-    const neg = FIELD[key].neg && filled && !bad && num(d) > 0;
-    return `<button class="cell ${filled ? '' : 'empty'} ${bad ? 'bad' : ''} ${neg ? 'neg' : ''}" data-act="cell" data-id="${id}" data-key="${key}">${filled ? (neg ? '−' : '') + esc(d) : '0'}</button>`;
+  const view = ui.view || 'me', me = myId();
+  const seg = `<div class="seg">${[['me', '我的计分'], ['all', '全桌总览']].map(([k, n]) => `<button class="${k === view ? 'on' : ''}" data-act="view" data-v="${k}">${n}</button>`).join('')}</div>`;
+  if (view === 'me' && !me) return seg + `<h2 class="h">你是哪位玩家？</h2><p class="note">选好后这台手机只填你自己的分数，其他人在各自手机上填，结果实时汇总。</p>
+    <div class="pick me">${turnOrder(S).map(id => `<button data-act="me" data-id="${id}">${por(id, 'sm')}<span>${esc(pname(id))}</span></button>`).join('')}</div>`;
+  return seg + (view === 'me' ? myScore(me) : fullTable());
+}
+
+function cellBtn(id, key) {
+  if (key === 'crown') return `<button class="cell ${S.crown === id ? 'crown' : 'empty'}" data-act="crown" data-id="${id}">${S.crown === id ? `+${CROWN_PTS}` : '无'}</button>`;
+  const d = (S.score[id] || {})[key], warn = warnOf(id, key) ? ' warn' : '';
+  if (FIELD[key].list) { const t = (d || []).reduce((a, b) => a + b, 0); return `<button class="cell ${d && d.length ? '' : 'empty'}${warn}" data-act="cell" data-id="${id}" data-key="${key}">${d && d.length ? t : '加'}</button>`; }
+  const filled = d !== undefined && d !== '';
+  const bad = filled && num(d) === null;
+  const neg = FIELD[key].neg && filled && !bad && num(d) > 0;
+  return `<button class="cell ${filled ? '' : 'empty'} ${bad ? 'bad' : ''} ${neg ? 'neg' : ''}${warn}" data-act="cell" data-id="${id}" data-key="${key}">${filled ? (neg ? '−' : '') + esc(d) : '0'}</button>`;
+}
+const rowName = k => `${FIELD[k].n}${k === 'thing' ? `<small>每个 −${THING_PTS}</small>` : k === 'crown' ? `<small>英格兰 +${CROWN_PTS}</small>` : ''}`;
+
+function myScore(id) {
+  const p = parts(S, id);
+  const item = k => {
+    const w = warnOf(id, k), d = (S.score[id] || {})[k];
+    const detail = FIELD[k].list && d && d.length > 1 ? `<div class="ms-ex">${d.map((v, i) => (i ? (v < 0 ? ' − ' : ' + ') : v < 0 ? '−' : '') + Math.abs(v)).join('')}</div>` : '';
+    return `<div class="card ms" data-k="ms-${k}"><div class="ms-t"><b>${rowName(k)}</b><div class="ms-h">${k === 'crown' ? '全场只有一个，点一下表示在你手上' : FIELD[k].hint}</div>${detail}${w ? `<div class="ms-w">${esc(w)}</div>` : ''}</div>${cellBtn(id, k)}</div>`;
   };
-  const row = k => `<tr data-k="sr-${k}"><th>${FIELD[k].n}${k === 'thing' ? `<small>每个 −${THING_PTS}</small>` : k === 'crown' ? `<small>英格兰 +${CROWN_PTS}</small>` : ''}</th>${order.map(id => `<td>${cell(id, k)}</td>`).join('')}</tr>`;
+  const others = turnOrder(S).filter(o => o !== id).map(o => { const q = parts(S, o); return `<span>${por(o, 'xs')}${esc(pname(o))} <b>${q ? q.total : '—'}</b></span>`; }).join('');
+  return `<div class="ms-who">${por(id, 'sm')}<div><b>${esc(pname(id))}</b><small>只填你自己的分数</small></div><button class="tbh" data-act="me" data-id=""><span>换人</span></button></div>
+    <h2 class="h">得分</h2><div class="list">${ROWS.slice(0, 9).map(item).join('')}</div>
+    <h2 class="h">扣分</h2><div class="list">${ROWS.slice(9).map(item).join('')}</div>
+    <div class="ms-tot card"><span>我的合计</span><b data-tt="${id}">${p ? p.total : '—'}</b></div>
+    <div class="ms-others">${others}</div>`;
+}
+
+function fullTable() {
+  const order = turnOrder(S);
+  const row = k => `<tr data-k="sr-${k}"><th>${rowName(k)}</th>${order.map(id => `<td>${cellBtn(id, k)}</td>`).join('')}</tr>`;
   const tots = order.map(id => parts(S, id));
+  const warns = order.flatMap(id => ROWS.map(k => warnOf(id, k) && `${pname(id)} · ${FIELD[k].n}：${warnOf(id, k)}`)).filter(Boolean);
   const head = t => `<tr class="grp" data-k="g-${t}"><td colspan="${order.length + 1}">${t}</td></tr>`;
   return `<table class="sc"><thead><tr><th></th>${order.map(id => `<th><div class="pv">${por(id, 'xs')}<span>${esc(pname(id))}</span></div></th>`).join('')}</tr></thead>
     <tbody>${head('得分')}${ROWS.slice(0, 9).map(row).join('')}${head('扣分')}${ROWS.slice(9).map(row).join('')}
     <tr data-k="sr-total"><th>合计</th>${order.map((id, i) => `<td class="tt" data-tt="${id}">${tots[i] ? tots[i].total : '—'}</td>`).join('')}</tr></tbody></table>
-    <p class="legend">船只、探索版图、房屋、羊和牛、职业卡牌逐项输入（如 3+5+8），合计自动相加；扣分项填正数，自动扣除。</p>`;
+    ${warns.map(w => `<p class="note">${esc(w)}</p>`).join('')}
+    <p class="legend">船只、探索版图、房屋、羊和牛、职业卡牌逐项输入（如 3+5+8），合计自动相加；扣分项填正数，自动扣除。没手机的玩家可以由别人在这里代填。</p>`;
 }
 
 function mvpTab() {
@@ -278,7 +346,7 @@ function mvpTab() {
       <div class="crown">${top.length > 1 ? '并 列 第 一' : 'M V P · 奥 丁 座 上 宾'}</div>
       ${por(champ.id)}
       <div class="nm">${top.map(r => esc(pname(r.id))).join(' · ')}</div>
-      <div class="fg">${top.map(r => COLOR_ZH[r.id]).join(' · ')} · ${roundsName(S.rounds)}</div>
+      <div class="fg">${top.map(r => COLOR_ZH[r.id]).join(' · ')} · ${roundsName(S.rounds)}${S.nor ? ' · 挪威扩展' : ''}</div>
       <div class="pts">${champ.total}<small>分</small></div>
     </div>
     <div class="btns sv" data-html2canvas-ignore><button class="btn ghost" data-act="rn">${ui.rn ? '收起改名' : '修改玩家名'}</button><button class="btn navy" data-act="save" ${ui.saving ? 'disabled' : ''}>${ui.saving ? '正在生成…' : '保存结算长图'}</button></div>
@@ -362,6 +430,7 @@ function sheetView() {
   return `<div class="mask" data-act="close"></div><div class="sheet">
     <h3>${esc(pname(s.id))} · ${f.neg ? '扣分 · ' : ''}${f.n}</h3><div class="hint">${f.hint}</div>
     <div class="disp"><div class="ex">${esc(exprText(s)) || '&nbsp;'}</div><div class="cur">= ${exprTotal(s)}</div></div>
+    ${f.quick ? `<div class="quick">${f.quick.map(([n, v]) => `<button data-act="q" data-v="${v}">${n} <b>${v}</b></button>`).join('')}</div>` : ''}
     <div class="keys">
       <button data-act="k" data-k="7">7</button><button data-act="k" data-k="8">8</button><button data-act="k" data-k="9">9</button><button class="op" data-act="k" data-k="+">+</button>
       <button data-act="k" data-k="4">4</button><button data-act="k" data-k="5">5</button><button data-act="k" data-k="6">6</button><button class="op" data-act="k" data-k="-">−</button>
@@ -390,6 +459,7 @@ function keypad(k) {
     else if (s.terms.length) { const t = s.terms.pop(); s.cur = String(Math.abs(t)); s.op = t < 0 ? '-' : '+'; s.opShown = t < 0 || s.terms.length > 0; }
   }
   else if (k === 'clr') { s.terms = []; s.cur = ''; s.op = '+'; s.opShown = false; }
+  else if (k.startsWith('q')) { commit(); s.terms.push(Number(k.slice(1))); s.op = '+'; s.opShown = false; }
   else if (k === 'ok') {
     const empty = !s.terms.length && s.cur === '';
     commit();
@@ -450,6 +520,8 @@ document.addEventListener('click', e => {
     case 'save': if (!ui.saving) saveImage(); break;
     case 'next': send({ t: 'next', round: S.round, phase: S.phase }); break;
     case 'pick': send({ t: 'pick', round: S.round, id: d.id }); break;
+    case 'pass': send({ t: 'pass', round: S.round, id: d.id }); break;
+    case 'opt': send({ t: 'opt', key: d.key, on: d.on === 'true' }); break;
     case 'undo': send({ t: 'undo' }); break;
     case 'reset': if (confirm('重新开局？本房间的流程和计分都会清空，所有人同步。')) send({ t: 'reset' }); break;
     case 'crown': send({ t: 'crown', id: S.crown === d.id ? null : d.id }); break;
@@ -462,6 +534,9 @@ document.addEventListener('click', e => {
       render(); break;
     }
     case 'k': keypad(d.k); break;
+    case 'q': keypad('q' + d.v); break;
+    case 'view': ui.view = d.v; render(); break;
+    case 'me': store.set(meKey(), d.id); ui.view = 'me'; render(); window.scrollTo(0, 0); break;
     case 'close': ui.sheet = null; render(); break;
   }
 });

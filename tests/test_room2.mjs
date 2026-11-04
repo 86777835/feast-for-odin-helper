@@ -108,7 +108,7 @@ const fillCell = async (p, id, key, digits) => {
   for (const k of [...digits, 'ok']) await p.click(`[data-act="k"][data-k="${k}"]`);
   await wait(250);
 };
-await B.click('[data-act="tab"][data-tab="score"]');
+await B.click('[data-act="tab"][data-tab="score"]'); await B.click('[data-act="view"][data-v="all"]');
 await B.click('[data-act="cell"][data-id="red"][data-key="ship"]');
 await B.click('[data-act="k"][data-k="3"]'); await B.click('[data-act="k"][data-k="+"]');
 eq('plus shows right away', (await B.textContent('.disp .ex')).trim(), '3 +');
@@ -177,6 +177,38 @@ while ((await status(A)) !== '第1/ 7 轮 · 取回维京人') await step(A);
 eq('solo phase 12 note', (await A.textContent('.ph.cur .phb')).includes('等待区'), true);
 await shot(A, '08_solo_se');
 await A.click('[data-act="reset"]'); await wait(400);
+
+// Norwegians + pass-order variant (4 players): passes recorded in phase 5 set next round's order
+const seatIds = ['black', 'blue', 'yellow', 'red'];   // seats set up earlier in this test
+await A.click('[data-act="n"][data-n="4"]'); await A.click('[data-act="rounds"][data-r="7"]'); await wait(300);
+await A.click('[data-act="opt"][data-key="nor"]'); await B.click('[data-act="opt"][data-key="passOrder"]'); await wait(400);
+eq('both options on, seen on C', await C.$$eval('[data-act="opt"].on', b => b.map(x => x.dataset.key)), ['nor', 'passOrder']);
+await shot(A, '09_options_se', true);
+await A.click('[data-act="begin"]'); await A.waitForSelector('.status'); await wait(300);
+await A.click('[data-act="tab"][data-tab="flow"]'); await B.click('[data-act="tab"][data-tab="flow"]');
+const ord1 = await A.$$eval('.slot', s => s.map(x => x.dataset.k.slice(5)));
+while ((await status(A)) !== '第1/ 7 轮 · 行动') await step(A);
+eq('next waits for all passes', await A.isDisabled('[data-act="next"]'), true);
+const passes = [ord1[2], ord1[0], ord1[3], ord1[1]];
+for (const [i, id] of passes.entries()) { await [A, B][i % 2].click(`[data-act="pass"][data-id="${id}"]`); await wait(300); }
+eq('pass numbers shown on B', (await B.textContent('.pick')).includes('第 4 个停手'), true);
+await shot(A, '10_passes_se', true);
+await step(B, A);
+eq('phase 6 needs no pick', [await status(A), await A.isDisabled('[data-act="next"]')], ['第1/ 7 轮 · 决定起始玩家', false]);
+eq('next order shown = reverse pass order', await A.$$eval('.pick button > span:last-child', s => s.map(x => x.textContent.replace(/^\d+\. /, ''))), passes.slice().reverse().map(id => names[seatIds.indexOf(id)]));
+while ((await status(A)) !== '第1/ 7 轮 · 动物繁殖') await step(A);
+eq('Norwegians breeding mentions pigs', (await A.textContent('.ph.cur .phb')).includes('猪'), true);
+while ((await status(A)) !== '第2/ 7 轮 · 增加维京人') await step(A);
+eq('round 2 order = reverse pass order', await A.$$eval('.slot', s => s.map(x => x.dataset.k.slice(5))), passes.slice().reverse());
+await A.click('[data-act="undo"]'); await wait(400);
+eq('undo returns to round 1', (await status(A)).startsWith('第1/ 7 轮'), true);
+await A.click('[data-act="tab"][data-tab="score"]'); await A.click('[data-act="view"][data-v="all"]'); await wait(200);
+eq('animal row renamed', (await A.textContent('[data-k="sr-animal"] th')).trim(), '动物');
+await A.click(`[data-act="cell"][data-id="${passes[0]}"][data-key="animal"]`);
+eq('horse and pig buttons', await A.$$eval('.quick button', b => b.map(x => x.textContent.trim())), ['羊 2', '怀孕羊 3', '牛 3', '怀孕牛 4', '马 6', '怀孕马 8', '猪 1']);
+await A.click('[data-act="q"][data-v="8"]'); await A.click('[data-act="q"][data-v="1"]'); await A.click('[data-act="k"][data-k="ok"]'); await wait(300);
+eq('horse + pig accepted without flag', await A.$$eval('.cell.warn', c => c.length), 0);
+await A.click('[data-act="tab"][data-tab="flow"]'); await A.click('[data-act="reset"]'); await wait(500);
 
 const errs = [A, B, C].flatMap(p => p.errs).filter(e => !/ERR_INTERNET_DISCONNECTED|WebSocket/.test(e));
 console.log(fails ? `${fails} FAILED: ${issues.join('; ')}` : 'ALL PASS', errs.length ? '\nERRORS:\n' + errs.join('\n') : '');

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10202b">
+<title>职业卡速查 · 奥丁的盛宴</title>
+<link rel="icon" href="img/icon-64.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Noto+Serif+SC:wght@600;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="hero"><div class="en">奥丁的盛宴</div><h1>职业卡速查</h1><div class="orn"></div></div><div class="band"></div>
+<div class="wrap">
+<form class="join" id="search"><input id="q" maxlength="20" autocomplete="off" placeholder="卡号或卡名，如 39C" enterkeyhint="search"><button class="btn navy">查找</button></form>
+<div class="chips cf" id="filters"></div>
+<p class="note">要点由本站用自己的话概括，便于对局中快速查阅；完整效果以卡面和规则书附录为准。</p>
+<div class="list cards" id="cards"><div class="empty">加载中…</div></div>
+<a class="btn" href="./">返回首页</a>
+<footer>非官方玩家工具</footer>
+</div>
+<script type="module" src="cards.js"></script>
+<script type="module" src="chat.js"></script>
+</body>
+</html>
