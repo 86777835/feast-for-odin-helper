@@ -61,6 +61,8 @@
 
 自动算出排名（同分按规则书并列获胜），展示 MVP、每人得分构成（航海 / 探索 / 房屋 / 牛羊 / 职业 / 财富，另列扣分）和 10 种趣味成就。终局时仍可修改玩家名，一键把整页结算生成长图，长按保存到相册。
 
+结算页最下面还有「给这款游戏打个分」：选好自己是谁（默认带出计分页选过的玩家），打 1–5 星、写一句评论，提交到[桌游小助手首页](https://boardgame.leisurecat.cloud)的统一评价接口，计入这款游戏的整体评分。评价卡不进长图；同一局再次提交会覆盖之前的评价。
+
 <p>
 <img src="docs/screenshots/results.jpg" width="260" alt="结算页">
 <img src="docs/screenshots/long.jpg" width="260" alt="结算长图">
@@ -145,6 +147,7 @@ node tests/test_room.mjs    http://localhost:8801/ ./shots                # 双�
 node tests/test_room2.mjs   http://localhost:8801/ ./shots                # 4 人局、小屏、撤销、断线、无效分数、平分、改名、长图、短局、单人
 node tests/test_history.mjs http://localhost:8801/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
 node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
+node tests/test_review.mjs  http://localhost:8801/ ./shots                # 结算页评价卡（总入口接口用 page.route 拦截，不往线上写数据）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --no-key       # 规则助手界面（未配置密钥时）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --mock-upstream # 备用模型切换（wrangler dev 需加 --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790 --var CHAT_CF_MODEL:@cf/none/missing）
 node tests/test_chat.mjs    https://你的域名/ ./shots --live              # 规则助手线上实问一次

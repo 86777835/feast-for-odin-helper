@@ -419,3 +419,20 @@ table.st{width:100%;border-collapse:collapse;background:rgba(255,252,243,.6);bor
 .oc p{margin-top:5px;font:500 14px/1.6 var(--sans);color:var(--ink)}
 .oc p.cn{font-size:12.5px;color:var(--ink2)}
 .tiles .tile.wide{grid-column:span 2}
+/* rating card on the results tab (reviewCard in app.js) */
+.rv{padding:12px 12px 10px}
+.rv-l{font-size:12px;color:var(--ink2);margin-bottom:6px}
+.rv-who{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.rv-who button{display:flex;align-items:center;gap:5px;height:34px;padding:0 10px 0 3px;border-radius:17px;border:1.5px solid rgba(42,34,25,.2);background:rgba(255,255,255,.5);color:var(--ink);font:600 13px var(--sans)}
+.rv-who button.on{border-color:var(--navy);background:var(--navy);color:#fff}
+.rv-st{display:flex;align-items:center;gap:2px;margin-bottom:10px}
+.rv-st button{width:40px;height:40px;border:0;background:none;font-size:32px;line-height:1;color:rgba(42,34,25,.22);padding:0}
+.rv-st button.on{color:var(--brass);text-shadow:0 1px 0 rgba(0,0,0,.15)}
+.rv-st span{margin-left:8px;font:600 14px var(--serif);color:var(--ink2)}
+.rv textarea{width:100%;min-height:72px;margin-bottom:10px;padding:10px;border-radius:8px;border:1.5px solid rgba(42,34,25,.2);background:rgba(255,255,255,.6);font:16px/1.6 var(--sans);color:var(--ink);resize:vertical;outline:none}
+.rv textarea:focus{border-color:var(--navy)}
+.rv > .btn{width:100%}
+.rv .err{margin-top:8px}
+.rv-done{text-align:center;font-size:30px;letter-spacing:4px;color:var(--brass)}
+.rv p{text-align:center;margin:4px 0 10px;font:600 15px var(--serif)}
+.rv .note{text-align:left;margin:8px 0 0;font:12px/1.6 var(--sans)}
