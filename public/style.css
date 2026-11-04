@@ -368,3 +368,7 @@ body.has-chat{padding-bottom:72px}
 .rk .parts{white-space:normal;line-height:1.5}
 .dr-s.first b{color:#fff}
 .dr-s.first .por{box-shadow:0 0 0 3px var(--brass2),0 0 22px rgba(230,201,125,.75)}
+/* landing cover: the box cover shown whole over a blurred copy of itself */
+.hero-art.cover{height:calc(env(safe-area-inset-top) + 300px)}
+.hero-art.cover .cv{position:absolute;z-index:1;inset:auto;left:50%;top:calc(env(safe-area-inset-top) + 18px);height:200px;width:auto;transform:translateX(-50%);object-fit:contain;border-radius:3px;border:2px solid rgba(230,201,125,.75);box-shadow:0 10px 28px rgba(0,0,0,.6)}
+.hero-art.cover .ht{bottom:14px}

@@ -139,5 +139,5 @@ node tools/screenshots.mjs  http://localhost:8801/ docs/screenshots       # 重�
 - 规则依据 Z-Man Games 英文版官方规则书（山脉板块按 Feuerland 官方勘误：最后的「2 银币」也算一项），术语采用游人码头中文版用词。常见问题由规则书整理，并非官方 FAQ。
 - 规则整理与每条出处见 [docs/规则整理.md](docs/规则整理.md)。
 - 快速模式（6 轮）各轮的收获，规则书没有印出，是根据部落版图快速模式那一面的照片整理的；玩家颜色（红、蓝、黄、黑）也来自实物照片。
-- 游戏名称和规则的权利归原出版方（Feuerland Spiele / Z-Man Games）所有。本站的封面、头像和教程插图都是原创绘制，没有使用出版社的封面、Logo 或卡图。
+- 游戏名称和规则的权利归原出版方（Feuerland Spiele / Z-Man Games）所有。首页展示的是 Feuerland 版《Ein Fest für Odin》原版封面（用 Codex CLI 高清化），版权归出版方；头像、教程插图和图标是用 Codex CLI 生成的原创插画。
 - 代码以 [MIT](LICENSE) 许可开源。
