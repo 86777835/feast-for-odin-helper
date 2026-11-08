@@ -169,7 +169,7 @@ await B.click('[data-act="reset"]'); await wait(600);
 // solo game: no start player draw, phase 6 skipped, solo notes shown
 await A.click('[data-act="n"][data-n="1"]'); await wait(300);
 await A.click('[data-act="rounds"][data-r="7"]'); await wait(300);
-eq('solo: no draw button', await A.$('[data-act="draw"]'), null);
+eq('solo: no draw button', await A.$('[data-act="order"]'), null);
 await A.click('[data-act="begin"]'); await A.waitForSelector('.status'); await wait(300);
 eq('solo track title', await A.textContent('.track .t'), '单人游戏');
 eq('solo skips 3 and 6 in round 1', await A.$$eval('.phs:last-of-type .ph.off', l => l.map(x => +x.dataset.k.slice(3))), [3, 6]);

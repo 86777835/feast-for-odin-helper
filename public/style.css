@@ -277,22 +277,6 @@ a.btn.ghost{line-height:35px}
 .fq p{padding:0 12px 11px;font:500 14px/1.7 var(--sans);color:var(--ink2)}
 .fq p a{font-size:12px;color:var(--navy2);white-space:nowrap}
 
-/* blind-bag draw overlay */
-.draw{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(8,20,27,.93);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);animation:drIn .25s ease;transition:opacity .4s}
-.draw.out{opacity:0}
-.dr-box{text-align:center;color:#f3ead6}
-.dr-t{font:900 22px var(--serif);letter-spacing:8px;text-indent:8px;color:var(--brass2)}
-.dr-slots{display:flex;gap:10px;justify-content:center;margin-top:24px;min-height:100px}
-.dr-s{width:64px;opacity:0;animation:drPop .75s cubic-bezier(.2,.9,.3,1.2) forwards;animation-delay:calc(var(--start) + var(--i) * var(--step))}
-.dr-s .por{display:block;width:58px;height:58px;padding:3px;margin:0 auto;box-shadow:0 0 0 2px var(--brass2),0 4px 12px rgba(0,0,0,.5)}
-.dr-s b{display:block;margin-top:6px;font:600 18px var(--num);color:var(--brass2)}
-.dr-s i{display:block;font-style:normal;font-size:11px;color:#cfc5ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dr-bag{width:120px;height:130px;margin:18px auto 0;transform-origin:50% 92%;animation:drShake .9s ease-in-out,drJig var(--step) ease-in-out var(--start) infinite}
-.dr-skip{margin-top:16px;font-size:12px;color:#8f8a7d}
-@keyframes drIn{from{opacity:0}}
-@keyframes drPop{0%{opacity:0;transform:translate(calc(var(--d) * 74px),170px) scale(.3)}45%{opacity:1;transform:translate(calc(var(--d) * 37px),-28px) scale(1.15)}100%{opacity:1;transform:none}}
-@keyframes drShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-9deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-5deg)}80%{transform:rotate(3deg)}}
-@keyframes drJig{0%,100%{transform:scale(1)}25%{transform:scale(1.07,.93)}}
 .lobby .lc em{display:block;margin-top:1px;font:700 10px var(--sans);font-style:normal;letter-spacing:2px;color:var(--brass)}
 
 /* rules assistant (chat.js) */

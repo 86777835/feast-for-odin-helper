@@ -109,12 +109,6 @@ export function reduce(s, a) {
       if (S.stage !== 'setup' || !ids().includes(a.id)) return null;
       S.start = a.id; return done();
 
-    case 'draw':    // setup: random start player (rulebook p.8); every phone plays the draw
-      if (S.stage !== 'setup' || S.n < 2) return null;
-      S.start = ids()[Math.floor(Math.random() * S.n)];
-      S.draw = (s.draw || 0) + 1;
-      return done();
-
     case 'begin':
       if (S.stage !== 'setup') return null;
       Object.assign(S, { stage: 'play', gid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),   // names this game in the archive

@@ -36,10 +36,7 @@ eq('A sees seat 2 turned black', await A.getAttribute('[data-k="seat-1"] .por im
 eq('A keeps own name', await A.inputValue('[data-name="0"]'), '阿斯');
 await A.click('[data-act="first"][data-id="yellow"]'); await wait(400);
 eq('B sees start player on seat 3', await B.textContent('[data-k="seat-2"] .fst'), '起始玩家');
-await B.click('[data-act="draw"]'); await wait(500);
-eq('draw plays on A too', await A.isVisible('#draw'), true);
-await shot(A, '01_draw');
-await A.click('#draw'); await B.click('#draw');
+eq('start player: link to the hub finger chooser', (await B.textContent('[data-act="order"]')).includes('手指轮盘'), true);
 await shot(A, '01_setup', true);
 await B.click('[data-act="begin"]'); await A.waitForSelector('.status');
 eq('A status', await statusText(A), '第1/ 7 轮 · 增加维京人');
