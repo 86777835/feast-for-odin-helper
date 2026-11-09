@@ -437,3 +437,5 @@ table.st{width:100%;border-collapse:collapse;background:rgba(255,252,243,.6);bor
 .bd-row span{display:block;margin-top:3px;font:500 13px/1.55 var(--sans);color:var(--ink)}
 .bd-sheet p{margin-top:8px;font:500 14.5px/1.65 var(--sans);color:var(--ink)}
 .bd-sheet p.cn{font-size:12.5px;color:var(--ink2)}
+/* 写评价: opens this game's review form on the hub, then 返回 comes back here */
+.hero-art>.rate-nav{left:auto;right:calc(env(safe-area-inset-right) + 12px)}
