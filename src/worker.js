@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { initialState, reduce, gameRecord, COLOR_ZH } from '../public/logic.js';
 import GUIDE from '../tools/讲解稿.md';
 import FAQ from '../tools/faq.json';
+import CARDS from '../public/cards.json';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I/L
 const newCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
@@ -70,7 +71,9 @@ async function checkDeepSeek(env) {
 const CHAT_SYSTEM = `你是「奥丁规则助手」，帮玩家解答桌游《奥丁的盛宴》（A Feast for Odin）的规则问题，也可以解释本网站「奥丁的盛宴小助手」怎么用。
 
 回答要求：
-- 只依据下面的「讲解稿」和「常见问题」作答，它们整理自官方规则书，术语采用中文版用词（部落版图、庭之广场、庭之惩罚、工棚、铁矿等）。资料里没有的内容（比如某张职业卡的具体效果），直接说资料里没有、建议翻规则书或附录，或问桌上的老玩家，不要编造规则。
+- 只依据下面的「讲解稿」和「常见问题」作答，它们整理自官方规则书，术语采用中文版用词（部落版图、庭之广场、庭之惩罚、工棚、铁矿等）。资料里没有的内容，直接说资料里没有、建议翻规则书或附录，或问桌上的老玩家，不要编造规则。
+- 单张职业卡：只依据末尾「本次问题可能涉及的职业卡」一节（来自本站「职业卡速查」）。玩家说的卡名可能和本站译名不完全一样（比如说「牛奶工」，本站有「挤奶工」和「送奶工」），就把列出的候选都简单说明，请玩家对照卡号确认。如果没有这一节，或者里面没有玩家问的那张卡，就回答「本站职业卡速查里没认出这张卡，可以告诉我卡号（印在卡的右下角，比如 39C），或者看卡面和附录」，到此为止，绝不自己猜测或编造卡的效果。
+- 你不能联网搜索，被要求联网时说明只能依据本站资料。
 - 与本游戏无关的问题，礼貌说明你只解答《奥丁的盛宴》的规则。
 - 用简体中文，简短直接：先给结论，再补一两句理由或例子。可以用短列表，不要用表格和标题。
 
@@ -82,6 +85,37 @@ ${GUIDE}
 # 常见问题
 ${FAQ.map(f => `【${f.cat}】问：${f.q}\n答：${f.a}`).join('\n\n')}`;
 
+// Single occupation cards: the cards a question names (by number like "39C", or by Chinese / English name, allowing a
+// one-character difference such as 牛奶工 → 挤奶工 / 送奶工) go into that request's prompt, not the whole list.
+const CARD_TYPE = { immediate: '立即生效（黄）', anytime: '随时可用（蓝）', each: '每次触发（红）', assoon: '一旦满足时触发一次（绿）' };
+const cardNum = c => parseInt(c.no, 10);
+function commonRun(a, b) {   // length of the longest common substring
+  let best = 0;
+  for (let i = 0; i < a.length; i++) for (let j = 0; j < b.length; j++) {
+    let k = 0; while (a[i + k] && a[i + k] === b[j + k]) k++;
+    if (k > best) best = k;
+  }
+  return best;
+}
+function cardsFor(text) {
+  const q = text.replace(/\s+/g, ''), lq = q.toLowerCase(), score = new Map();
+  const hit = (c, v) => score.set(c, Math.max(score.get(c) || 0, v));
+  // numbers count only with a deck letter (39C) or a word saying it is a card number, so "第 4 列" is not card 4
+  for (const m of q.matchAll(/(\d{1,3})([abcABC])(?![a-zA-Z])/g)) for (const c of CARDS) if (cardNum(c) === +m[1] && c.deck.toLowerCase() === m[2].toLowerCase()) hit(c, 10);
+  for (const m of q.matchAll(/(?:卡号|编号|#|No\.?)(\d{1,3})|(\d{1,3})号卡/gi)) for (const c of CARDS) if (cardNum(c) === +(m[1] || m[2])) hit(c, 10);
+  for (const c of CARDS) {
+    if (c.zh && q.includes(c.zh)) hit(c, 9);
+    else if (c.zh && c.zh.length >= 3) { const r = commonRun(q, c.zh); if (r >= 2 && r >= c.zh.length - 1) hit(c, 4 + r); }
+    if (c.en.length >= 4 && lq.includes(c.en.toLowerCase().replace(/\s+/g, ''))) hit(c, 9);
+  }
+  return [...score].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([c]) => c);
+}
+const cardSection = cards => !cards.length ? '' : `
+
+# 本次问题可能涉及的职业卡（摘自本站「职业卡速查」，要点是本站的概括，不是卡面原文）
+按卡名自动匹配，可能不相关：玩家问的是一般规则时忽略这一节，不要提这些卡。
+${cards.map(c => `- ${c.no}「${c.zh}」${c.en}：${c.deck} 组${c.start ? '起始卡' : ''}，${CARD_TYPE[c.type] || ''}，终局 ${c.pts} 分。要点：${c.gist}${c.note ? ` 说明：${c.note}` : ''}${c.banned ? ' 〔官方禁用名单（迷你扩展 2，适用于挪威扩展）〕' : ''}`).join('\n')}`;
+
 async function chat(req, env) {
   if (!env.DEEPSEEK_API_KEY) return Response.json({ error: '规则助手还没有配置好，请稍后再试' }, { status: 503 });
   const { success } = await env.CHAT_LIMIT.limit({ key: req.headers.get('cf-connecting-ip') || 'local' });
@@ -92,7 +126,9 @@ async function chat(req, env) {
     && msgs.every(m => ['user', 'assistant'].includes(m?.role) && typeof m.content === 'string' && m.content.trim() && m.content.length <= 3000);
   if (!valid) return Response.json({ error: '问题格式不对，请刷新页面再试' }, { status: 400 });
   console.log('chat question', JSON.stringify(msgs.at(-1).content));   // what players ask, for the usage brief
-  const messages = [{ role: 'system', content: CHAT_SYSTEM }, ...msgs.slice(-10).map(m => ({ role: m.role, content: m.content }))];
+  const cards = cardsFor(msgs.filter(m => m.role === 'user').slice(-2).map(m => m.content).join('\n'));
+  if (cards.length) console.log('chat cards', cards.map(c => c.no).join(','));
+  const messages = [{ role: 'system', content: CHAT_SYSTEM + cardSection(cards) }, ...msgs.slice(-10).map(m => ({ role: m.role, content: m.content }))];
   const fails = [];   // HTTP status, 0 = unreachable or error, 'queue' = no answer started in time or stalled
   const order = await env.CHAT_STATE.get(DEEPSEEK_DOWN) ? ORDER.deepseekDown : ORDER.normal;
   let cur = await firstAnswer(order, 0, env, messages, fails);
