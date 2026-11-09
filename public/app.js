@@ -188,7 +188,8 @@ function landing() {
     <div class="tiles">
       <a class="card tile" href="guide"><span class="ti"><img src="img/rules-poster.jpg" alt=""></span><span><b>新手教程</b>图文 + 常见问题</span></a>
       <a class="card tile" href="history"><span class="ti rec">录</span><span><b>往期对局</b>战绩与成绩参照</span></a>
-      <a class="card tile wide" href="cards"><span class="ti rec">职</span><span><b>职业卡速查</b>按卡号或卡名查要点</span></a>
+      <a class="card tile" href="cards"><span class="ti rec">职</span><span><b>职业卡速查</b>按卡号或卡名</span></a>
+      <a class="card tile" href="boards"><span class="ti rec">图</span><span><b>版图指南</b>点格子看效果</span></a>
     </div>
     <h2 class="h">房间<small>${rooms && rooms.length ? `${rooms.length} 个` : ''}</small></h2>
     <div class="list">${roomList}</div>

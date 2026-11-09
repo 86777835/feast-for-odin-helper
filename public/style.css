@@ -424,3 +424,16 @@ table.st{width:100%;border-collapse:collapse;background:rgba(255,252,243,.6);bor
 .rv-done{text-align:center;font-size:30px;letter-spacing:4px;color:var(--brass)}
 .rv p{text-align:center;margin:4px 0 10px;font:600 15px var(--serif)}
 .rv .note{text-align:left;margin:8px 0 0;font:12px/1.6 var(--sans)}
+/* board guide (boards.html) */
+.bd-pick{margin-top:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.bd-pick::-webkit-scrollbar{display:none}
+.bd-info{margin-top:8px}.bd-info th{width:28%;text-align:left;padding-left:10px}.bd-info td{text-align:left;font:500 13px/1.5 var(--sans)}
+.bd-img{position:relative;margin-top:10px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.25);background:var(--steel)}
+.bd-img img{display:block;width:100%;height:auto}
+.bd-spot{position:absolute;padding:0;border:1.5px solid rgba(230,201,125,.75);border-radius:6px;background:rgba(230,201,125,.08)}
+.bd-spot:active,.bd-spot.on{background:rgba(230,201,125,.35);border-color:#fff;box-shadow:0 0 0 2px var(--red)}
+.bd-credit{margin-top:6px;font-size:11.5px;color:var(--ink2);text-align:center}.bd-credit a{color:var(--navy2)}
+.bd-row{display:block;width:100%;padding:8px 11px;text-align:left;font:inherit;color:inherit}
+.bd-row b{font:700 14.5px var(--sans)}.bd-row small{margin-left:8px;font-size:11.5px;color:var(--ink2)}
+.bd-row span{display:block;margin-top:3px;font:500 13px/1.55 var(--sans);color:var(--ink)}
+.bd-sheet p{margin-top:8px;font:500 14.5px/1.65 var(--sans);color:var(--ink)}
+.bd-sheet p.cn{font-size:12.5px;color:var(--ink2)}

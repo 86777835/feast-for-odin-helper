@@ -84,6 +84,16 @@
 <img src="docs/screenshots/cards.jpg" width="260" alt="职业卡速查">
 </p>
 
+### 版图指南
+
+首页「版图指南」收录 41 面版图照片，点版图上的任意格子，弹出这一格的效果、在第几列、要几个维京人和出处；照片下方按区域列出全部格子（共 819 个热区）：
+- 行动版图：基础游戏 3-4 人面、1-2 人面、四人局模仿格扩展板；挪威扩展 3-4 人面、1-2 人面（3 人局用哪几面，页面上写明）。
+- 探索版图：基础 8 面（含修订版分值）、挪威扩展 8 面、迷你扩展 3 面。
+- 部落版图：长局面、短局面。
+- 房屋与工棚：工棚、石屋、长屋，以及挪威扩展 12 面手工工棚。
+
+效果说明依据官方规则书、附录和扩展设计师在 BGG 的说明，用自己的话写；照片看不清、资料查不到的格子标「未能确认」。版图照片来自 BGG 玩家，每面都署名并链接原图——这是经用户同意、对「只用官方封面原图」约定的例外。
+
 ### 新手教程与常见问题
 
 18 节图文讲解（含挪威扩展和停手顺序轮序），加上依据官方规则书整理的 32 条常见问题，新手开局前刷一遍就能上桌。
@@ -149,6 +159,7 @@ node tests/test_room.mjs    http://localhost:8801/ ./shots                # 双�
 node tests/test_room2.mjs   http://localhost:8801/ ./shots                # 4 人局、小屏、撤销、断线、无效分数、平分、改名、长图、短局、单人
 node tests/test_history.mjs http://localhost:8801/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
 node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
+node tests/test_boards.mjs  http://localhost:8801/ ./shots                # 版图指南：分组、切换版图、点格子弹效果、直达链接
 node tests/test_review.mjs  http://localhost:8801/ ./shots                # 结算页评价卡（总入口接口用 page.route 拦截，不往线上写数据）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --no-key       # 规则助手界面（未配置密钥时）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --mock-upstream # 备用模型切换（wrangler dev 需加 --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790 --var CHAT_CF_MODEL:@cf/none/missing）
