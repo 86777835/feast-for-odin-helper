@@ -33,6 +33,23 @@ for (const bd of data.boards) { const r = await fetch(api('/boards/' + bd.img));
 await page.goto(api('/boards#expl-bear-island')); await page.waitForSelector('.bd-img img');
 eq('deep link opens Bear Island', (await page.textContent('#pick .chip.on')).includes('熊岛'), true);
 await page.screenshot({ path: out + '/boards_expl.png' });
+// bad network: the photo fails twice, then loads on the third try
+let tries = 0;
+await page.route('**/boards/expl-shetland.jpg*', r => (++tries <= 2 ? r.abort('failed') : r.continue()));
+await page.goto(api('/boards#expl-shetland')); await page.waitForSelector('.bd-img img');
+await page.waitForFunction(() => { const i = document.querySelector('.bd-img img'); return i.complete && i.naturalWidth > 0; }, null, { timeout: 15000 });
+eq('photo loads after two failures', [tries, await page.$('.bd-load')], [3, null]);
+eq('spots there while loading', await page.$$eval('.bd-spot', s => s.length) > 0, true);
+// photo never loads: a clear retry button that is not hidden under the spots
+await page.unroute('**/boards/expl-shetland.jpg*');
+await page.route('**/boards/expl-faroe*.jpg*', r => r.abort('failed'));
+await page.goto(api('/boards#expl-faroe-islands')); await page.waitForSelector('[data-reload]', { timeout: 15000 });
+await page.screenshot({ path: out + '/boards_failed.png' });
+await page.unroute('**/boards/expl-faroe*.jpg*');
+await page.click('[data-reload]');
+await page.waitForFunction(() => { const i = document.querySelector('.bd-img img'); return i.complete && i.naturalWidth > 0; }, null, { timeout: 15000 });
+eq('retry button reloads the photo', await page.$('.bd-load'), null);
+errs.splice(0, errs.length, ...errs.filter(e => !/Failed to load resource/.test(e)));   // the aborted requests above
 eq('no page errors', errs, []);
 await b.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);
