@@ -487,3 +487,10 @@ table.st{width:100%;border-collapse:collapse;background:rgba(255,252,243,.6);bor
 .teachgo b{display:block;font:900 16px var(--serif);letter-spacing:1px;color:var(--red)}
 .teachgo span{flex:1;font:500 12.5px/1.5 var(--sans);color:var(--ink2)}
 .teachgo i{font:600 22px var(--sans);font-style:normal;color:var(--red)}
+/* rules assistant: answers from a web search (chat.js) */
+.cweb{margin:-2px 0 6px;padding:5px 8px;border-radius:7px;background:#f6eedb;font:500 12px/1.5 var(--sans);color:var(--ink2)}
+.cweb b{color:var(--red)}
+.csrc{margin-top:8px;padding-top:6px;border-top:1px dashed rgba(90,74,56,.25);font:12px/1.5 var(--sans);color:var(--ink2)}
+.csrc a{display:block;color:var(--navy);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.csrc i{margin-left:6px;font-style:normal;color:var(--ink2);opacity:.7}
+.cwait{display:block;margin-bottom:4px;font:500 12.5px var(--sans);color:var(--ink2)}

@@ -113,6 +113,8 @@
 
 每个页面右下角都有「规则」按钮，点开就能用中文问规则，比如宴会桌上的食物怎么摆、牛羊怎么繁殖。助手用 DeepSeek V4.1 Flash（`deepseek-flash`）逐字回答，只依据本站的讲解稿和常见问题作答，资料里没有的不会乱编。问到单张职业卡时（卡号如 39C，或中英文卡名，说法差一个字也能认出，比如「牛奶工」会列出挤奶工和送奶工），服务端从职业卡速查数据里找出对应的卡，只把这几张带进当次提问。Flash 过载、排队或出错时，依次改由备用模型回答（页面上不显示是哪个模型，服务端日志里有记录）：先是 Cloudflare Workers AI 上的 Qwen3.8 27B（`@cf/qwen/qwen3.8-27b`，不依赖 DeepSeek 的服务器），再是 DeepSeek V4 Pro（`deepseek-v4-pro`）。每个模型 9 秒内须开始回答，回答中途停顿超过 8 秒也会换下一个模型从头回答；都不行就提示稍后再问。另有每小时一次的定时检查（Cron Trigger）：DeepSeek 不通时，接下来一小时直接先用 Qwen，结果存在 KV 里。
 
+**联网查找（2026-11-12 起，照匹兹堡移植）**：讲解稿、常见问题和职业卡速查里没有答案时，模型只回一行「【需联网】+英文搜索词」（以 A Feast for Odin 开头，问挪威扩展再加 The Norwegians），服务器转去调 DeepSeek 的搜索接口（`/v1/tools/search`，先只搜 BGG，不足 3 条再搜全网），再让模型只依据搜到的摘要作答、用 [1] [2] 标出处，并指出说法属于基础游戏还是挪威扩展。页面在这类回答上方固定显示「本站资料没有这一条，以下来自网上讨论，本站未核对」，下面列来源链接；搜不到或搜索失败就明说，不编。资料只写了相近规则（比如只写了抢劫能用铁矿，问的是捕鲸）时也去联网，不让模型类推。单张职业卡认不出时仍请玩家报卡号，不联网。服务器只按整行转发模型输出，模型先解释再要求联网时也能接住。每次联网在日志里记一条 `chat web search`，用来核对后补进常见问题。
+
 <p>
 <img src="docs/screenshots/chat.jpg" width="260" alt="规则助手">
 </p>
@@ -147,7 +149,7 @@ wrangler deploy              # 部署到你自己的 Cloudflare 账号
 
 自己部署时：
 - **域名**：去掉或改掉 `wrangler.jsonc` 里的自定义域名 `odin.leisurecat.cloud`，以及 `public/index.html`、`tools/build_guide.py` 里分享图的地址。
-- **KV**：`CHAT_STATE` 没写 id，首次 `wrangler deploy` 时会自动创建。
+- **KV**：`CHAT_STATE` 写的是本账号已有的 KV（`feast-for-odin-room-chat-state`），`wrangler dev --remote` 需要它。部署到别的账号时，换成自己用 `wrangler kv namespace create` 建的 id。
 - **规则助手**（可选）：运行 `wrangler secret put DEEPSEEK_API_KEY` 填入你的 DeepSeek API 密钥；不配置时助手会提示「还没有配置好」。
 
 重新生成教程页：
@@ -170,6 +172,7 @@ node tests/test_boards.mjs  http://localhost:8801/ ./shots                # 版�
 node tests/test_review.mjs  http://localhost:8801/ ./shots                # 结算页评价卡（总入口接口用 page.route 拦截，不往线上写数据）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --no-key       # 规则助手界面（未配置密钥时）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --mock-upstream # 备用模型切换（wrangler dev 需加 --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790 --var CHAT_CF_MODEL:@cf/none/missing）
+node tests/test_chat.mjs    http://localhost:8801/ ./shots --mock-web      # 联网查找（同上的 wrangler dev 参数；和上一条隔 1 分钟跑，避开每分钟 8 问的限流）
 node tests/test_chat.mjs    https://你的域名/ ./shots --live              # 规则助手线上实问一次
 node tools/screenshots.mjs  http://localhost:8801/ docs/screenshots       # 重新生成 README 截图（需空的本地数据）
 ```

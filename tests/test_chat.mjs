@@ -1,6 +1,7 @@
 // Rules assistant. Usage: node tests/test_chat.mjs <base-url> <shots-dir> [--no-key | --fake-key | --live]
 //   --no-key   local `wrangler dev` without DEEPSEEK_API_KEY: panel UI, streamed answer (mocked /api/chat), "not configured" error
 //   --fake-key local `wrangler dev --var DEEPSEEK_API_KEY:fake --var CHAT_CF_MODEL:@cf/none/missing`: request checks, upstream error, rate limit
+//   --mock-web local `wrangler dev` with the --mock-upstream flags: web search when the notes don't cover a question
 //   --live     the deployed site with a real key: one real question
 import { chromium } from 'playwright-core';
 const [base, out, mode] = process.argv.slice(2);
@@ -84,6 +85,71 @@ if (mode === '--mock-upstream') {
   eq('stalled partial not kept as history', bodies.at(-1).messages.slice(-3).map(m => m.content), ['八', 'deepseek-v4-pro 的回答', '九']);
   eq('every model stalls → partial kept, busy message', [err9, text9, seen], [true, 'deepseek-v4-pro 答了一半AI 服务器都在忙，请过一两分钟再问', ['deepseek-flash', 'deepseek-v4-pro']]);
   await page.screenshot({ path: out + '/chat_fallback.png' });
+  await b.close(); srv.close();
+  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);
+}
+
+if (mode === '--mock-web') {
+  // Web search when the tutorial and FAQ don't cover a question. Same wrangler dev flags as --mock-upstream.
+  // The mock model asks to search for questions containing 「网上」; the mock search API answers per `search`.
+  const { createServer } = await import('node:http');
+  let search = 'ok', asked = [];   // search: 'ok' | 'empty' | 'fail'; asked: search queries received
+  const sse = text => `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\ndata: [DONE]\n\n`;
+  const srv = createServer((req, res) => {
+    let body = ''; req.on('data', c => body += c);
+    req.on('end', () => {
+      const j = JSON.parse(body);
+      if (req.url === '/v1/tools/search') {
+        asked.push(j.query);
+        if (search === 'fail') { res.writeHead(500); return res.end('{}'); }
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ results: search === 'empty' ? [] : [
+          { title: 'Artisan shed question <b>', url: 'https://boardgamegeek.com/thread/1', site_name: 'BoardGameGeek', summary: 'Designer: yes, you may.', rerank_score: 2.1, authority: 3 },
+          { title: '手工工棚讨论', url: 'https://example.cn/a', site_name: null, snippet: '网友说可以。' }] }));
+      }
+      const sys = j.messages[0].content, q = j.messages.at(-1).content;
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      if (sys.includes('联网搜索到的网页摘要')) return res.end(sse(`依据网上说法：可以 [1]（摘要条数 ${(sys.match(/^\[\d\] /gm) || []).length}）`));
+      if (q.includes('先解释')) {   // the model explains first and asks to search at the end
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: '资料里没有提到这一点。' } }] })}\n\n`);
+        return setTimeout(() => res.end(sse('\n\n【需联网】A Feast for Odin whaling ore')), 300);
+      }
+      if (q.includes('网上')) {   // the marker arrives split over two chunks, like a real stream
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: '【需' } }] })}\n\n`);
+        return setTimeout(() => res.end(sse('联网】A Feast for Odin artisan shed')), 200);
+      }
+      res.end(sse(q.includes('无关') ? '我只解答奥丁的盛宴规则。' : '资料里的回答'));
+    });
+  }).listen(8790);
+  const b = await chromium.launch({ channel: 'chrome' });
+  const page = await (await b.newContext({ viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
+  page.on('pageerror', e => { fails++; console.log('FAIL page error', e.message); });
+  const bodies = []; page.on('request', r => r.url().endsWith('/api/chat') && bodies.push(JSON.parse(r.postData())));
+  await page.goto(base); await page.click('.cfab');
+  const askOnce = async (q, s) => {
+    search = s; asked = [];
+    await page.fill('.cin textarea', q); await page.press('.cin textarea', 'Enter');
+    await page.waitForFunction(() => !document.querySelector('.cin button').disabled);
+    return page.$$eval('.cm.a', l => { const a = l.at(-1); return { err: a.className.includes('err'), label: !!a.querySelector('.cweb'),
+      text: [...a.childNodes].filter(n => !n.classList?.contains('cweb') && !n.classList?.contains('csrc')).map(n => n.textContent).join(''),
+      src: [...a.querySelectorAll('.csrc a')].map(x => [x.textContent, x.getAttribute('href'), x.target]) }; });
+  };
+  eq('covered by the notes: answered directly, no search', [await askOnce('宴会怎么摆？', 'ok'), asked],
+    [{ err: false, label: false, text: '资料里的回答', src: [] }, []]);
+  eq('not covered: searched with the model\'s words, labelled, sources listed', [await askOnce('网上怎么说手工工棚？', 'ok'), asked],
+    [{ err: false, label: true, text: '依据网上说法：可以 [1]（摘要条数 2）',
+       src: [['[1] Artisan shed question <b>BoardGameGeek', 'https://boardgamegeek.com/thread/1', '_blank'], ['[2] 手工工棚讨论example.cn', 'https://example.cn/a', '_blank']] }, ['A Feast for Odin artisan shed site:boardgamegeek.com', 'A Feast for Odin artisan shed']]);
+  await page.screenshot({ path: out + '/chat_web.png' });
+  eq('the search request never reaches the page as text', (await page.$$eval('.cm.a', l => l.map(x => x.textContent).join(''))).includes('需联网'), false);
+  eq('nothing found: says so, no label, nothing made up', [await askOnce('网上还有啥？', 'empty'), asked.length],
+    [{ err: false, label: false, text: '本站资料里没有这一条，网上也没找到可靠的说法。建议翻一下规则书，或者问问桌上的老玩家。', src: [] }, 2]);
+  eq('web answer goes back as plain history (no label, no sources)', bodies.at(-1).messages.slice(-3).map(m => m.content),
+    ['网上怎么说手工工棚？', '依据网上说法：可以 [1]（摘要条数 2）', '网上还有啥？']);
+  eq('search API down: says so', (await askOnce('网上第三问？', 'fail')).text, '本站资料里没有这一条，联网查找也失败了，请过一会儿再问，或者翻一下规则书。');
+  eq('off-topic: no search', [(await askOnce('无关的问题', 'ok')).text, asked], ['我只解答奥丁的盛宴规则。', []]);
+  eq('search asked for at the end of an explanation: explanation dropped, searched', [await askOnce('先解释再查', 'ok'), asked],
+    [{ err: false, label: true, text: '依据网上说法：可以 [1]（摘要条数 2）',
+       src: [['[1] Artisan shed question <b>BoardGameGeek', 'https://boardgamegeek.com/thread/1', '_blank'], ['[2] 手工工棚讨论example.cn', 'https://example.cn/a', '_blank']] }, ['A Feast for Odin whaling ore site:boardgamegeek.com', 'A Feast for Odin whaling ore']]);
   await b.close(); srv.close();
   console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);
 }

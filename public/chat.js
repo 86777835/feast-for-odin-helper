@@ -13,7 +13,7 @@ document.body.classList.add('has-chat');
 document.body.insertAdjacentHTML('beforeend', `
 <button class="cfab" type="button" aria-label="打开规则助手"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 3C6.5 3 2 6.6 2 11c0 2.4 1.3 4.6 3.4 6.1L4.6 21l4.3-2.4c1 .3 2 .4 3.1.4 5.5 0 10-3.6 10-8s-4.5-8-10-8zm-4 9.3a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6z"/></svg>规则</button>
 <div class="cpanel hidden" role="dialog" aria-label="规则助手">
-  <div class="chd"><span class="cav">规</span><div><b>奥丁规则助手</b><span><i class="con"></i>依据规则书讲解与常见问题作答</span></div><button class="cx" type="button" aria-label="关闭">×</button></div>
+  <div class="chd"><span class="cav">规</span><div><b>奥丁规则助手</b><span><i class="con"></i>依据规则书作答，查不到会联网找</span></div><button class="cx" type="button" aria-label="关闭">×</button></div>
   <div class="band"></div>
   <div class="clog">
     <div class="cwel"><img src="img/hero.jpg" alt=""><div><b>有规则问题，尽管问</b><span>宴会、繁殖、探索、计分……桌上起了争议也可以问我</span></div></div>
@@ -30,9 +30,9 @@ fab.onclick = () => open(true);
 $c('.cx').onclick = () => open(false);
 $c('.csug').onclick = e => { const b = e.target.closest('button'); if (b) ask(b.textContent); };
 form.onsubmit = e => { e.preventDefault(); ask(box.value); };
-// Other pages (the teach page) open the panel and ask a question in one tap.
-window.askRules = q => { open(true); ask(q); };
 box.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(box.value); } };
+// Other pages (the 3-minute teach page) open the panel and ask a question in one tap.
+window.askRules = q => { open(true); ask(q); };
 
 // One message row; assistant rows carry the avatar. Returns the bubble.
 function bubble(cls, html) {
@@ -49,10 +49,17 @@ async function ask(q) {
   bubble('u', fmt(q));
   msgs.push({ role: 'user', content: q });
   const out = bubble('a', '<i class="cdots"><b></b><b></b><b></b></i>');
-  let text = '', fb = null;
+  let text = '', fb = null, web = null;   // web: sources when the answer comes from a web search
   const t0 = Date.now();
   // When DeepSeek is overloaded it queues the request and sends nothing; stop waiting if no text in 30 s.
-  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 30000);
+  const ctl = new AbortController();
+  let timer = setTimeout(() => ctl.abort(), 30000);
+  // An answer from the web is labelled as unchecked by this site, with its sources under it.
+  const show = () => {
+    const head = web?.length ? '<div class="cweb">本站资料没有这一条，以下来自网上讨论，<b>本站未核对</b>，请自行判断</div>' : '';
+    const src = web?.length ? `<div class="csrc">来源：${web.map((w, i) => `<a href="${esc(w.url)}" target="_blank" rel="noopener">[${i + 1}] ${esc(w.title)}<i>${esc(w.site)}</i></a>`).join('')}</div>` : '';
+    out.innerHTML = head + fmt(text) + src; log.scrollTop = log.scrollHeight;
+  };
   try {
     const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: msgs.slice(-10) }), signal: ctl.signal });   // the server keeps only the last 10 and rejects over 20
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `出错了（${r.status}）`);
@@ -72,8 +79,13 @@ async function ask(q) {
         const j = JSON.parse(data);
         if (j.error) throw new Error(j.error);
         if (j.reset) { text = ''; fb = j.reset; out.innerHTML = '<i class="cdots"><b></b><b></b><b></b></i>'; continue; }   // the model stalled; the next one starts over
+        if (j.searching) {   // not in this site's notes: the server is searching the web, which takes a few more seconds
+          clearTimeout(timer); timer = setTimeout(() => ctl.abort(), 30000); text = '';   // drop anything shown before the search
+          out.innerHTML = '<span class="cwait">本站资料里没有，正在联网查找…</span><i class="cdots"><b></b><b></b><b></b></i>'; continue;
+        }
+        if (j.web) { web = j.web; continue; }
         const piece = j.choices?.[0]?.delta?.content;
-        if (piece) { clearTimeout(timer); text += piece; out.innerHTML = fmt(text); log.scrollTop = log.scrollHeight; }
+        if (piece) { clearTimeout(timer); text += piece; show(); }
       }
     }
     if (!text) throw new Error('没有收到回答，请再问一次');
