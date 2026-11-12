@@ -10,7 +10,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await page.route('https://boardgame.leisurecat.cloud/**', r => r.fulfill({ json: {} }));
   const check = async text => {
-    const nav = page.locator('.back-nav');
+    const nav = page.locator('.back-nav:not(.rate-nav)');
     await nav.waitFor({ state: 'visible' });
     assert.equal(await nav.textContent(), text);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -29,7 +29,7 @@ try {
   };
   await page.goto(base);
   await check('‹ 全部游戏');
-  assert.equal(await page.locator('.back-nav').getAttribute('href'), 'https://boardgame.leisurecat.cloud');
+  assert.equal(await page.locator('.back-nav:not(.rate-nav)').getAttribute('href'), 'https://boardgame.leisurecat.cloud');
   await page.screenshot({ path: `${out}/nav_odin_landing.png` });
   await page.click('[data-act="create"]');
   await page.waitForSelector('[data-act="begin"]');
@@ -40,7 +40,7 @@ try {
   await page.press('[data-name="0"]', 'Enter');
   const rejoin = async () => {
     await check('‹ 首页');
-    await page.click('.back-nav');
+    await page.click('.back-nav:not(.rate-nav)');
     await check('‹ 全部游戏');
     assert.equal(new URL(page.url()).search, '');
     await page.click(`[data-act="rejoin"][data-code="${code}"]`);
@@ -76,9 +76,9 @@ try {
   for (const path of ['guide.html', 'history.html', 'cards.html']) {
     await page.goto(new URL(path, base).href);
     await check('‹ 返回');
-    assert.equal(await page.locator('.back-nav').getAttribute('href'), '/');
+    assert.equal(await page.locator('.back-nav:not(.rate-nav)').getAttribute('href'), '/');
     if (path === 'guide.html') await page.screenshot({ path: `${out}/nav_odin_guide.png` });
-    await page.click('.back-nav');
+    await page.click('.back-nav:not(.rate-nav)');
     await check('‹ 全部游戏');
     console.log(`PASS ${path} return link and mobile geometry`);
   }
