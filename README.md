@@ -18,6 +18,12 @@
 
 ## 功能一览
 
+### 第一次玩：5 分钟讲规则
+
+首页「第一次玩？5 分钟讲规则」（`/teach`）是给讲规则的人照着念的讲稿：7 段约 1100 字，每段标了大约几秒，念下来四五分钟就能开局。每个重要要素（部落版图和负分格、维京人和行动版图的 4 列、四色物品和升级、收入斜线、奖励格、宴会和庭之惩罚、牛羊、三种船、突袭掷骰、探索、移民、房屋、职业卡、英格兰王冠等）都用一句话点到；细节判定交给每段下面的「问」按钮和最后的「先别管，遇到再问」，一点就问规则助手。
+
+讲稿里带下划线的词点开，从底部弹出图片、「在桌上哪儿看到」「什么意思」和「还不懂？问规则助手」。页面最后是按类别排的图标速查。讲稿只讲基础游戏，挪威扩展放在「遇到再问」里。图片截自 Z-Man Games 官方英文规则书，页脚署名并链接原文（用户同意的例外）。
+
 ### 开局：人数、游戏长度、座位与颜色
 
 1–4 人局，标准模式 7 轮或快速模式 6 轮。每位玩家填名字、选颜色（红、蓝、黄、黑），按顺时针排好座位。可以手动指定起始玩家，或点「随机抽起始玩家」，所有手机同时播放抽签动画（规则书：起始玩家随机决定）。单人游戏自动跳过起始玩家相关的步骤。
@@ -159,6 +165,7 @@ node tests/test_room.mjs    http://localhost:8801/ ./shots                # 双�
 node tests/test_room2.mjs   http://localhost:8801/ ./shots                # 4 人局、小屏、撤销、断线、无效分数、平分、改名、长图、短局、单人
 node tests/test_history.mjs http://localhost:8801/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
 node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
+node tests/test_teach.mjs   http://localhost:8801/ ./shots                # 讲规则页：入口、每个术语的图片注释、「问」按钮、图标速查、手机宽度（模拟 /api/chat，可对线上跑）
 node tests/test_boards.mjs  http://localhost:8801/ ./shots                # 版图指南：分组、切换版图、点格子弹效果、直达链接
 node tests/test_review.mjs  http://localhost:8801/ ./shots                # 结算页评价卡（总入口接口用 page.route 拦截，不往线上写数据）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --no-key       # 规则助手界面（未配置密钥时）
