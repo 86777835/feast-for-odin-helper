@@ -21,12 +21,29 @@ await page.click('.teachgo'); await page.waitForSelector('.tpart');
 eq('teach page opened', new URL(page.url()).pathname, '/teach');
 eq('seven parts plus 注意事项', await page.$$eval('.tpart h2', l => l.map(h => h.querySelector('span').textContent.replace(/^\S+?(?=[一-龥])/, ''))),
   ['怎么赢', '每一轮', '放维京人', '物品和摆放', '宴会和牛羊', '船、探索、移民', '结束和计分', '注意事项']);
-const read = await page.$$eval('.tline', l => l.map(p => p.textContent).join(''));
-console.log(`  script: ${read.length} characters to read aloud`);
-eq('script four to five minutes (under 1300 characters)', read.length < 1300, true);
+// two modes: with the Norwegians by default, or base game only
+const modeOn = () => page.$eval('.tmode [aria-pressed="true"]', b => b.textContent);
+const script = () => page.$$eval('.tline', l => l.map(p => p.textContent).join(''));
+const noteCount = () => page.$$eval('#later details', l => l.length);
+eq('with the Norwegians by default', await modeOn(), '带挪威扩展');
+const BASE_WORDS = ['部落版图', '负分格', '维京人', '起始玩家驼鹿', '收入斜线', '奖励物品格', '宴会桌', '庭之惩罚', '武器卡', '职业卡', '升级', '捕鲸船', '商船', '长船', '探索', '移民', '工棚', '石屋', '长屋', '山脉板块', '特殊板块', '英格兰王冠'];
+const NW_WORDS = ['挪威扩展', '扩展行动版图', '第 5 列', '手工工棚', '马', '猪', '小移民', '胜利点标记', '偷窃', '钓鱼和猎驼鹿'];
+const nwRead = await script(), nwNotes = await noteCount();
+console.log(`  with the Norwegians: ${nwRead.length} characters, ${nwNotes} notes`);
+eq('Norwegians script about six minutes (under 1700 characters)', nwRead.length < 1700, true);
 // every important element is at least named
-for (const w of ['部落版图', '负分格', '维京人', '起始玩家驼鹿', '收入斜线', '奖励物品格', '宴会桌', '庭之惩罚', '武器卡', '职业卡', '升级', '捕鲸船', '商船', '长船', '探索', '移民', '工棚', '石屋', '长屋', '山脉板块', '特殊板块', '英格兰王冠'])
-  if (!read.includes(w)) { fails++; console.log('FAIL script mentions', w); }
+for (const w of [...BASE_WORDS, ...NW_WORDS]) if (!nwRead.includes(w)) { fails++; console.log('FAIL Norwegians script mentions', w); }
+eq('Norwegians notes: base ones plus the expansion ones', nwNotes >= 20, true);
+eq('expansion notes are tagged', await page.$$eval('#later summary .tnw', l => l.length), nwNotes - 15);
+await page.click('.tmode [data-mode="b"]');
+const read = await script();
+console.log(`  base game: ${read.length} characters, ${await noteCount()} notes`);
+eq('base script four to five minutes (under 1300 characters)', read.length < 1300, true);
+for (const w of BASE_WORDS) if (!read.includes(w)) { fails++; console.log('FAIL base script mentions', w); }
+eq('base script has nothing from the expansion', ['挪威', '第 5 列', '手工工棚', '小移民', '胜利点标记', '偷窃'].filter(w => read.includes(w)), []);
+eq('base: 15 notes, none tagged, no expansion icons', [await noteCount(), await page.$$eval('#later .tnw', l => l.length), await page.$$eval('.tic[data-t="artisan"]', l => l.length)], [15, 0, 0]);
+await page.click('.tmode [data-mode="n"]');
+eq('switch back to the Norwegians', [await modeOn(), await noteCount()], ['带挪威扩展', nwNotes]);
 await page.screenshot({ path: out + '/teach_top.png' });
 
 // every term in the script and every icon in the guide opens a note with a name, an icon and both texts
@@ -60,10 +77,10 @@ eq('「问」 sends its question', [asked.at(-1), await page.$$eval('.cm.a', l =
 await page.click('.cx');
 // 注意事项: after the script, 10–15 items, each a title and a written answer, closed until tapped;
 // 「还有疑问？」 asks the assistant about that item
-const notes = await page.$$eval('#later details', l => l.map(d => ({ open: d.open, t: d.querySelector('summary').textContent.replace(/^\d+/, ''), a: d.querySelector('p').textContent.length, q: d.querySelector('.tmore')?.dataset.q })));
+const notes = await page.$$eval('#later details', l => l.map(d => ({ open: d.open, t: d.querySelector('summary').firstChild.nextSibling.textContent, a: d.querySelector('p').textContent.length, q: d.querySelector('.tmore')?.dataset.q })));
 console.log(`  ${notes.length} notes`);
-eq('注意事项 has 10–15 items', notes.length >= 10 && notes.length <= 15, true);
-eq('every note has a title and a 2–4 sentence answer, closed at first', notes.filter(n => n.open || n.t.length < 4 || n.a < 40 || n.a > 260), []);
+eq('注意事项 has at least 15 items', notes.length >= 15, true);
+eq('every note has a title and a 2–4 sentence answer, closed at first', notes.filter(n => n.open || n.t.length < 2 || n.a < 40 || n.a > 260), []);
 eq('every note asks about its own title', notes.filter(n => n.q !== `「${n.t}」这一条我还有疑问，请再讲讲。`), []);
 eq('注意事项 comes after the script and ends with the AI hint', await page.$eval('#later', s => [!!s.previousElementSibling?.matches('#p7'), s.querySelector('h2 span').textContent.endsWith('注意事项'), s.lastElementChild.textContent]),
   [true, true, '注意事项里没有的，点右下角「规则」问 AI。']);
@@ -86,6 +103,9 @@ await page.locator('#icons').scrollIntoViewIfNeeded(); await page.screenshot({ p
 eq('no sideways scrolling at 375 px', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 eq('「去建房间」 goes to the landing page', await page.getAttribute('.tgo', 'href'), '/');
 eq('link to the board guide', await page.$$eval('.tgo', l => l.map(a => a.getAttribute('href'))), ['/', 'boards']);
+// the choice is remembered in this browser
+await page.click('.tmode [data-mode="b"]'); await page.reload(); await page.waitForSelector('.tpart');
+eq('base game remembered after reload', [await modeOn(), await noteCount()], ['只玩基础', 15]);
 eq('no page errors', errs, []);
 await b.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);

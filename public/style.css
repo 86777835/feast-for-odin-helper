@@ -465,6 +465,10 @@ table.st{width:100%;border-collapse:collapse;background:rgba(255,252,243,.6);bor
 .tnotei:last-of-type{border-bottom:1px dashed rgba(90,74,56,.3)}
 .tnotei summary{padding-left:0}
 .tnotei p{padding:0 0 10px}
+.tnotei summary .tnw{margin-left:8px;padding:1px 6px;border-radius:8px;background:rgba(31,74,99,.12);color:var(--navy);font:600 11px var(--sans);font-style:normal;vertical-align:2px}
+.tmode{display:flex;align-items:center;gap:6px;margin:14px 2px 0;font:600 13px var(--sans);color:var(--ink2)}
+.tmode button{flex:1;min-height:38px;border-radius:19px;border:1.5px solid rgba(31,74,99,.4);background:#fffaf0;color:var(--navy);font:700 14px var(--sans);cursor:pointer}
+.tmode button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
 .tnotei summary i{font:600 13px var(--num);font-style:normal;color:var(--brass);margin-right:8px}
 .tnotei .tmore{margin:0 0 12px;min-height:30px;font-size:12.5px}
 .tnote{margin-top:4px;font:500 13.5px/1.6 var(--sans);color:var(--ink2)}
