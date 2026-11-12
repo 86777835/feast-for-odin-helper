@@ -2,7 +2,7 @@
 // (same wording as tools/讲解稿.md). It names every important element in a sentence and leaves the fine rulings to the
 // rules assistant. Terms in {text|id} open a note with a picture cropped from the rulebook (img/teach/<icon>.webp); the
 // 「问」 buttons and each note's 「问规则助手」 ask the rules assistant (chat.js) straight away.
-// Base game only; the Norwegians are one 「遇到再问」 question. Pictures: official rulebook (user's call), credited in the footer.
+// Base game only; after the script, 注意事项 (NOTES) lists the easy-to-get-wrong points; the Norwegians go to the assistant. Pictures: official rulebook (user's call), credited in the footer.
 const ICON = (id, cls = '') => id ? `<img class="ico ${cls}" src="img/teach/${id}.webp" alt="">` : '';
 
 // id: name, where you see it on the table, what it means. icon: a picture in img/teach/.
@@ -98,18 +98,25 @@ const PARTS = [
   ], ask: ['放在板上的银币算分吗？', '英格兰王冠怎么得？', '同分怎么办？'] }
 ];
 
-// Fine rulings left out of the script: ask when they come up.
-const LATER = [
-  ['收入斜线要按什么顺序盖', '收入怎么算？收入对角线怎么盖？'],
-  ['奖励格怎样才算围住', '奖励阶段怎么拿物品？'],
-  ['房屋里能放什么', '房屋里能放什么？'],
-  ['摆错了、相邻违规了怎么办', '摆错了、相邻违规了怎么办？'],
-  ['最多能有几艘船', '船怎么获得？最多能有几艘？'],
-  ['抢劫时长船上的铁矿有什么用', '抢劫时长船上的铁矿有什么用？'],
-  ['四人局的灰色扩展格', '四人局的灰色扩展格是做什么的？'],
-  ['职业卡怎么计分', '职业卡怎么计分？'],
-  ['单人怎么玩', '单人游戏怎么玩？'],
-  ['开了挪威扩展有什么不同', '挪威扩展有哪些变化？']
+// 注意事项: the easy-to-get-wrong points outside the main flow, gone through one by one after the script. Each is a
+// title and a written answer (own words, from tools/faq.json and docs/规则整理.md, which cite the rulebook pages);
+// what isn't here goes to the rules assistant.
+const NOTES = [
+  ['收获和繁殖的时机', '收获在每轮第 2 阶段，只给橙色农产品，看宴会桌上刚空出的那格下面的标记；长局第 3、5、7 轮没有收获。牛羊繁殖在宴会之前，所以最后一轮也会繁殖。有怀孕的就全部翻回、再得 1 只新的；没有怀孕、但有 2 只以上，就翻 1 只成怀孕。同一阶段不会既生小崽又怀孕。'],
+  ['宴会桌怎么摆', '橙不能挨橙，红不能挨红，橙挨红可以；桌上只能放「1 银币」硬币，银币可以相邻，铁矿不能上桌。同一种食物（比如豆子）最多 1 块横放，其余同种只能竖放。牛羊也能拿来上桌，宴会后桌上的东西都退回供应区。每个空格拿 1 个庭之惩罚，留到终局，每个扣 3 分。'],
+  ['移民要花多少钱', '付和当前轮数一样多的银币，比如第 4 轮付 4 银。把一艘商船或长船翻面，放到宴会桌最左边的空位，以后每次宴会都少摆一些格子。长船上的铁矿会丢掉，维京人不会减少；宴会桌放不下就不能再移民。终局移民的商船 18 分、长船 21 分。'],
+  ['职业卡什么时候能打出', '手里的职业卡不生效、终局也不计分，必须用打职业卡的行动格打出来。另外在第 4 列放满 4 个维京人时，可以在执行行动前或后额外打出 1 张。第 3 列放满 3 个维京人时，执行行动前先抽 1 张职业卡。打出的卡按右上角计分，有的是负分。'],
+  ['探索版图什么时候翻面', '长局第 3 到 6 轮（短局第 2 到 5 轮），依次把设得兰群岛、法罗群岛、冰岛、格陵兰岛翻成另一面，已经被人拿走的就不翻了。同时其他没被拿走的探索版图各放 2 银币，被翻的那块上的银币退回供应区。拿探索版图时，板上的银币归你；第 1 轮和最后一轮没有这一步。'],
+  ['武器卡怎么用', '开局每人有弓箭、陷阱、长矛各 1 张，之后每轮第 4 阶段每人再抽 1 张，正面朝上放在自己面前。弓箭用于狩猎、陷阱用于设陷阱、长矛用于捕鲸，都可以代替木头付掉骰子结果；长剑在突袭和抢劫时每张加 1。手里剩下的武器卡终局不计分。'],
+  ['狩猎、设陷阱、捕鲸怎么算成功', '这三种要掷小。掷完要付和结果一样多的木头或对应的武器卡，付得起就成功；最多掷 3 次，重掷会作废上一次。捕鲸时，你捕鲸船上的每个铁矿（包括船上印好的那个）都让结果减 1。失败拿 1 木头和 1 张对应的武器卡；设陷阱失败退回 1 个维京人、捕鲸失败退回 2 个，本轮还能再用。'],
+  ['突袭和抢劫怎么算', '这两种要掷大：突袭用橙色 8 面骰，抢劫用蓝色 12 面骰，抢劫必须有长船。抢劫用铁矿最多的那艘长船，每个铁矿加 1，铁矿不消耗；突袭不能用船上的铁矿。两种都可以花石头、长剑每个加 1，然后拿剑值不超过结果的一块蓝色物品或特殊板块。失败拿 1 石头和 1 张长剑，抢劫失败还退回 1 个维京人。'],
+  ['物品摆放和相邻', '绿色物品不能和绿色上下左右相邻，斜着可以；蓝色、银币、铁矿可以和同类相邻。放上去就不能再拿回来。摆错了要马上改；终局才发现的，每一对违规相邻的板块罚 1 个庭之惩罚。'],
+  ['收入斜线要怎么盖', '收入是收入斜线上最小的、还没盖住的数字。要盖住一个数字，它左边、下边和左下方那一整块都得先盖满，所以要从左下往右上紧凑地摆；印着物品图案的格子算已经盖住。最后一轮的收入可以不领银币，改记到计分表的「最终收入」。'],
+  ['奖励格怎样才算围住', '部落版图上印着物品图案的格子，自己空着、周围 8 格全被盖住（靠边的只有 5 格），每轮奖励阶段就给你这种物品。把物品格本身盖住，这个奖励就没了。最后一轮没有奖励阶段。'],
+  ['房屋里能放什么', '石屋和长屋里能放橙、红、绿、蓝物品和银币，不能放铁矿；里面只要求橙不挨橙、红不挨红。长屋中间的两根柱子不能盖。工棚和石屋上有要用木头、石头盖的格子，终局时可以把手边剩下的木头、石头放上去。'],
+  ['行动格和船的小规矩', '占了一个行动格，至少要执行它的一个效果，不能空占。同一艘船一轮里可以用在好几个不同的行动上，比如同一艘长船先抢劫、再探索。船最多 3 艘捕鲸船、4 艘大船（商船和长船）。'],
+  ['终局计分容易漏的', '已经放在版图上的银币不再计分，只有手边的银币每枚 1 分。只算打出的职业卡，手里的不算。英格兰王冠额外 2 分，放在哪儿都算。庭之惩罚每个扣 3 分，从第一轮起一直累计。'],
+  ['最后一轮少了哪些步骤', '最后一轮没有翻转探索版图，宴会之后游戏立刻结束：没有奖励阶段，也不调整山脉板块、不取回维京人。结束后先把手边的木头、石头放到工棚和石屋的格子上，再开始计分。']
 ];
 
 // Icon guide, grouped the way things sit on the table.
@@ -134,16 +141,18 @@ const askBtn = (text, q) => `<button type="button" class="tq" data-q="${esc(q)}"
 
 document.getElementById('teach').innerHTML = `
   <p class="tlead">讲的人照着念，四五分钟就能开局。<b>带下划线的词</b>点一下看图和解释；有疑问点「问」，规则助手马上回答。</p>
-  <nav class="tnav">${PARTS.map((p, i) => `<a href="#p${i + 1}"><i>${i + 1}</i>${p.title}</a>`).join('')}<a href="#later">遇到再说</a><a href="#icons">图标速查</a></nav>
+  <nav class="tnav">${PARTS.map((p, i) => `<a href="#p${i + 1}"><i>${i + 1}</i>${p.title}</a>`).join('')}<a href="#later">注意事项</a><a href="#icons">图标速查</a></nav>
   ${PARTS.map((p, i) => `<section class="card tpart" id="p${i + 1}">
     <h2 class="h"><span><i>${i + 1}</i>${p.title}</span><small>约 ${p.sec} 秒</small></h2>
     ${p.lines.map(s => `<p class="tline">${line(s)}</p>`).join('')}
     <div class="tasks"><em>桌上常见疑问</em>${p.ask.map(q => askBtn(q, q)).join('')}</div>
   </section>`).join('')}
   <section class="card tpart" id="later">
-    <h2 class="h"><span><i>…</i>先别管，遇到再问</span></h2>
-    <p class="tnote">下面这些第一局用不上，或者遇到了再查也来得及。点一下就问规则助手。</p>
-    <div class="tlater">${LATER.map(([label, q]) => askBtn(label, q)).join('')}</div>
+    <h2 class="h"><span><i>!</i>注意事项</span><small>${NOTES.length} 条</small></h2>
+    <p class="tnote">流程讲完后，一条一条过一遍。这些是主流程之外容易出错、容易争的地方，点开念答案。</p>
+    ${NOTES.map(([t, a], i) => `<details class="fq tnotei"><summary><i>${i + 1}</i>${esc(t)}</summary><p>${esc(a)}</p>
+      <button type="button" class="tq tmore" data-q="${esc(`「${t}」这一条我还有疑问，请再讲讲。`)}">还有疑问？问规则助手</button></details>`).join('')}
+    <p class="tnote">注意事项里没有的，点右下角「规则」问 AI。</p>
   </section>
   <a class="btn tgo" href="/">讲完了，去建房间</a>
   <a class="btn ghost tgo" href="boards">想看行动版图每一格？去版图指南</a>

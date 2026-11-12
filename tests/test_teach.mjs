@@ -19,8 +19,8 @@ await page.goto(base); await page.waitForSelector('.teachgo');
 eq('landing shows the teach entry', (await page.textContent('.teachgo b')), '第一次玩？5 分钟讲规则');
 await page.click('.teachgo'); await page.waitForSelector('.tpart');
 eq('teach page opened', new URL(page.url()).pathname, '/teach');
-eq('seven parts plus 遇到再说', await page.$$eval('.tpart h2', l => l.map(h => h.querySelector('span').textContent.replace(/^\S+?(?=[一-龥])/, ''))),
-  ['怎么赢', '每一轮', '放维京人', '物品和摆放', '宴会和牛羊', '船、探索、移民', '结束和计分', '先别管，遇到再问']);
+eq('seven parts plus 注意事项', await page.$$eval('.tpart h2', l => l.map(h => h.querySelector('span').textContent.replace(/^\S+?(?=[一-龥])/, ''))),
+  ['怎么赢', '每一轮', '放维京人', '物品和摆放', '宴会和牛羊', '船、探索、移民', '结束和计分', '注意事项']);
 const read = await page.$$eval('.tline', l => l.map(p => p.textContent).join(''));
 console.log(`  script: ${read.length} characters to read aloud`);
 eq('script four to five minutes (under 1300 characters)', read.length < 1300, true);
@@ -57,6 +57,22 @@ await page.click('.cx');
 const q = await page.$eval('#p2 .tq', x => x.dataset.q);
 await page.locator('#p2 .tq').first().click(); await page.waitForFunction(n => document.querySelectorAll('.cm.a').length > n && !document.querySelector('.cm.a:last-child .cdots'), 1);
 eq('「问」 sends its question', [asked.at(-1), await page.$$eval('.cm.a', l => l.at(-1).textContent)], [q, `答：${q}`]);
+await page.click('.cx');
+// 注意事项: after the script, 10–15 items, each a title and a written answer, closed until tapped;
+// 「还有疑问？」 asks the assistant about that item
+const notes = await page.$$eval('#later details', l => l.map(d => ({ open: d.open, t: d.querySelector('summary').textContent.replace(/^\d+/, ''), a: d.querySelector('p').textContent.length, q: d.querySelector('.tmore')?.dataset.q })));
+console.log(`  ${notes.length} notes`);
+eq('注意事项 has 10–15 items', notes.length >= 10 && notes.length <= 15, true);
+eq('every note has a title and a 2–4 sentence answer, closed at first', notes.filter(n => n.open || n.t.length < 4 || n.a < 40 || n.a > 260), []);
+eq('every note asks about its own title', notes.filter(n => n.q !== `「${n.t}」这一条我还有疑问，请再讲讲。`), []);
+eq('注意事项 comes after the script and ends with the AI hint', await page.$eval('#later', s => [!!s.previousElementSibling?.matches('#p7'), s.querySelector('h2 span').textContent.endsWith('注意事项'), s.lastElementChild.textContent]),
+  [true, true, '注意事项里没有的，点右下角「规则」问 AI。']);
+const n3 = page.locator('#later details').nth(2);
+await n3.locator('summary').click();
+eq('tapping a note opens it', [await n3.evaluate(d => d.open), await n3.locator('p').isVisible(), await n3.locator('.tmore').isVisible()], [true, true, true]);
+await n3.scrollIntoViewIfNeeded(); await page.screenshot({ path: out + '/teach_notes.png' });
+await n3.locator('.tmore').click(); await page.waitForFunction(n => document.querySelectorAll('.cm.a').length > n && !document.querySelector('.cm.a:last-child .cdots'), 2);
+eq('「还有疑问？」 sends that note\'s question', asked.at(-1), notes[2].q);
 await page.click('.cx');
 eq('no button inside a button', await page.$$eval('button button', l => l.length), 0);
 
