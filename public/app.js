@@ -55,7 +55,7 @@ const store = {
 
 let code = cleanCode(new URLSearchParams(location.search).get('r'));
 let S = null, noRoom = false, online = false, ws = null, queue = [], retry = 0;
-const ui = { tab: store.get('odin-tab') || 'flow', sheet: null, err: '', busy: false, rooms: null, rn: false, saving: false, all: false, rv: null };   // rn: rename inputs shown on the results tab; all: every phase's detail open; rv: rating form (reviewCard)
+const ui = { tab: store.get('odin-tab') || 'flow', sheet: null, err: '', busy: false, rooms: null, rn: false, saving: false, posting: false, all: false, rv: null };   // posting: the photo poster is being made; rn: rename inputs shown on the results tab; all: every phase's detail open; rv: rating form (reviewCard)
 
 // Rooms this phone has been in, newest first. Kept on the phone so they don't depend on the public list.
 function mine() {
@@ -350,7 +350,7 @@ function mvpTab() {
       <div class="fg">${top.map(r => COLOR_ZH[r.id]).join(' · ')} · ${roundsName(S.rounds)}${S.nor ? ' · 挪威扩展' : ''}</div>
       <div class="pts">${champ.total}<small>分</small></div>
     </div>
-    <div class="btns sv" data-html2canvas-ignore><button class="btn ghost" data-act="rn">${ui.rn ? '收起改名' : '修改玩家名'}</button><button class="btn navy" data-act="save" ${ui.saving ? 'disabled' : ''}>${ui.saving ? '正在生成…' : '保存结算长图'}</button></div>
+    <div class="btns sv" data-html2canvas-ignore><button class="btn ghost" data-act="rn">${ui.rn ? '收起改名' : '修改玩家名'}</button><button class="btn navy" data-act="save" ${ui.saving ? 'disabled' : ''}>${ui.saving ? '正在生成…' : '保存结算长图'}</button><button class="btn navy" data-act="poster" ${ui.posting ? 'disabled' : ''}>${ui.posting ? '正在生成…' : '打印'}</button></div>
     ${ui.rn ? `<div class="card" data-k="rn" data-html2canvas-ignore style="margin-top:8px;padding:2px 10px 8px">${turnOrder(S).map(id => { const i = S.players.findIndex(p => p.id === id); return `<div class="tb">${por(id, 'xs')}<input class="pn" data-pk="name-${i}" data-name="${i}" value="${esc(P(id).name)}" placeholder="玩家名" maxlength="12" enterkeyhint="done"></div>`; }).join('')}</div>` : ''}
     ${top.length > 1 ? '<p class="note" data-html2canvas-ignore>同分不再比较，按规则书并列获胜。</p>' : ''}
     <h2 class="h">排名与得分构成</h2>
@@ -424,12 +424,53 @@ async function saveImage() {
   } catch (e) { toast('生成长图失败：' + e.message); }
   ui.saving = false; render();
 }
-function showImage(url) {
+function showImage(url, { tip = '长按图片保存到相册', file = `奥丁的盛宴结算-${code}.jpg`, alt = '结算长图', cls = '', onClose } = {}) {
   const el = document.createElement('div');
-  el.className = 'shotv';
-  el.innerHTML = `<div class="sv-top"><span>长按图片保存到相册</span><a href="${url}" download="奥丁的盛宴结算-${code}.jpg">下载</a><button type="button">关闭</button></div><img src="${url}" alt="结算长图">`;
-  el.querySelector('button').onclick = () => el.remove();
+  el.className = 'shotv ' + cls;
+  el.innerHTML = `<div class="sv-top"><span>${tip}</span><a href="${url}" download="${file}">下载</a><button type="button">关闭</button></div><img src="${url}" alt="${alt}">`;
+  el.querySelector('button').onclick = () => { el.remove(); onClose?.(); };
   document.body.appendChild(el);
+}
+
+/* ---------- photo poster for a 3-inch pocket printer (2×3 in): 600×900 CSS px captured at 2× = 1200×1800 ----------
+   Background art: original, made with Codex (img/poster.jpg), loaded only when 「打印」 is tapped. Every player in
+   finishing order with portrait, name, total and the categories that scored most. Text sizes follow
+   docs/打印海报说明.md (at 2×: body ≥ 40 px, names ≥ 52 px, totals ≥ 90 px) and stays 30+ CSS px off the edges. */
+const shortName = n => n.length > 7 ? n.slice(0, 6) + '…' : n;
+function posterHTML(R) {
+  const row = r => {
+    const best = CATS.map(c => ({ ...c, v: r[c.k] })).filter(c => c.v > 0).sort((a, b) => b.v - a.v);
+    const chips = (r.minus ? best.slice(0, 2) : best.slice(0, 3)).map(c => `<span><em style="background:${c.c}"></em>${c.n} <b>${c.v}</b></span>`).join('')
+      + (r.minus ? `<span class="mn">扣分 <b>−${r.minus}</b></span>` : '');
+    return `<div class="pp-row${r.place === 1 ? ' first' : ''}"><div class="pp-rk">${r.place === 1 ? '冠' : r.place}</div>
+      <span class="pp-por" style="--c:${COLORS[r.id]}"><img src="img/${r.id}.jpg" alt=""></span>
+      <div class="pp-who"><div class="pp-l1"><div class="pp-nm">${esc(shortName(pname(r.id)))}</div><div class="pp-tot">${r.total}<small>分</small></div></div>
+        <div class="pp-pt">${chips}</div></div></div>`;
+  };
+  const d = new Date();
+  return `<img class="pp-bg" src="img/poster.jpg" alt="">
+    <div class="pp-head"><div class="pp-t">奥丁的盛宴</div>
+      <div class="pp-s">${roundsName(S.rounds)}${S.nor ? ' · 挪威扩展' : ''} · ${S.n} 人局</div>
+      <div class="pp-s">${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()} · 房间 ${code}</div></div>
+    <div class="pp-rows n${R.rows.length}">${R.rows.map(row).join('')}</div>
+    <div class="pp-f">奥丁的盛宴小助手 · ${location.host}</div>`;
+}
+async function savePoster() {
+  const R = results(S);
+  if (R.error) return toast('计分里有无效数字，请先到「计分」修正');
+  ui.posting = true; render();
+  const el = document.createElement('div');
+  el.id = 'poster';
+  try {
+    await loadScript('vendor/html2canvas.min.js');
+    el.innerHTML = posterHTML(R);
+    document.body.appendChild(el);
+    await Promise.all([...el.querySelectorAll('img')].map(i => i.decode().catch(() => { throw new Error('图片加载失败，请检查网络后再试'); })));
+    await document.fonts.ready;
+    const canvas = await window.html2canvas(el, { scale: 2, width: 600, height: 900, backgroundColor: '#efe6cf', logging: false });
+    showImage(canvas.toDataURL('image/jpeg', 0.92), { tip: '长按保存到相册，用打印机 App 选 3 寸相纸打印', file: `奥丁的盛宴海报-${code}.jpg`, alt: '结算海报', cls: 'poster', onClose: () => el.remove() });
+  } catch (e) { el.remove(); toast('生成海报失败：' + e.message); }
+  ui.posting = false; render();
 }
 
 /* ---------- start player: the hub's finger chooser / bag draw, then 「返回」 comes back here ---------- */
@@ -529,6 +570,7 @@ document.addEventListener('click', e => {
     case 'all': ui.all = !ui.all; render(); break;
     case 'rn': ui.rn = !ui.rn; render(); break;
     case 'save': if (!ui.saving) saveImage(); break;
+    case 'poster': if (!ui.posting) savePoster(); break;
     case 'next': send({ t: 'next', round: S.round, phase: S.phase }); break;
     case 'pick': send({ t: 'pick', round: S.round, id: d.id }); break;
     case 'pass': send({ t: 'pass', round: S.round, id: d.id }); break;

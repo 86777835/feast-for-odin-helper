@@ -502,3 +502,34 @@ table.st{width:100%;border-collapse:collapse;background:rgba(255,252,243,.6);bor
 .csrc a{display:block;color:var(--navy);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .csrc i{margin-left:6px;font-style:normal;color:var(--ink2);opacity:.7}
 .cwait{display:block;margin-bottom:4px;font:500 12.5px var(--sans);color:var(--ink2)}
+
+/* photo poster for a 3-inch pocket printer (app.js savePoster): 600×900 off screen, captured at 2× = 1200×1800 */
+.shotv.poster img{max-width:360px}
+#poster{position:absolute;left:-10000px;top:0;width:600px;height:900px;overflow:hidden;background:var(--parch);color:var(--ink);font-family:var(--sans)}
+#poster .pp-bg{position:absolute;inset:0;width:600px;height:900px}
+#poster .pp-head{position:absolute;left:44px;right:44px;top:298px;text-align:center}
+#poster .pp-t{font:900 44px/1.1 var(--serif);letter-spacing:10px;color:var(--red);padding-left:10px}
+#poster .pp-s{margin-top:3px;font:600 20px/1.3 var(--sans);color:var(--ink2);letter-spacing:1px}
+#poster .pp-rows{position:absolute;left:44px;right:44px;top:410px;bottom:76px;display:flex;flex-direction:column;justify-content:center;gap:10px}
+#poster .pp-row{position:relative;display:flex;align-items:center;gap:10px;height:86px;padding:0 14px 0 8px;border-radius:12px;background:rgba(255,250,236,.8);border:2px solid rgba(90,74,56,.28)}
+#poster .pp-row.first{height:100px;background:linear-gradient(180deg,rgba(255,246,214,.96),rgba(243,224,170,.92));border:3px solid var(--brass)}
+#poster .n2 .pp-row,#poster .n1 .pp-row{height:112px}
+#poster .n2 .pp-row.first,#poster .n1 .pp-row.first{height:128px}
+#poster .pp-rk{flex:none;width:30px;text-align:center;font:600 28px var(--num);color:var(--ink2)}
+#poster .first .pp-rk{width:38px;height:38px;line-height:38px;border-radius:50%;background:var(--red);color:#fff3d6;font:900 21px var(--serif)}
+#poster .pp-por{flex:none;width:64px;height:64px;border-radius:50%;padding:4px;background:var(--c);box-shadow:0 2px 6px rgba(0,0,0,.25)}
+#poster .first .pp-por{width:76px;height:76px}
+#poster .n2 .pp-por{width:80px;height:80px}
+#poster .n2 .first .pp-por{width:92px;height:92px}
+#poster .pp-por img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
+#poster .pp-who{flex:1;min-width:0}
+#poster .pp-l1{display:flex;align-items:baseline;gap:8px}
+#poster .pp-nm{flex:1;min-width:0;font:900 27px/1.2 var(--serif);color:var(--ink);white-space:nowrap}
+#poster .pp-pt{display:flex;flex-wrap:nowrap;gap:9px;margin-top:2px;font:600 20px/1.3 var(--sans);color:var(--ink2);white-space:nowrap}
+#poster .pp-pt em{display:inline-block;width:11px;height:11px;margin-right:3px;border-radius:3px;vertical-align:1px}
+#poster .pp-pt b{color:var(--ink)}
+#poster .pp-pt .mn,#poster .pp-pt .mn b{color:var(--red)}
+#poster .pp-tot{flex:none;font:600 46px/.9 var(--num);color:var(--navy)}
+#poster .first .pp-tot{font-size:54px;color:var(--red)}
+#poster .pp-tot small{margin-left:2px;font:600 20px var(--sans);color:var(--ink2)}
+#poster .pp-f{position:absolute;left:40px;right:40px;bottom:38px;text-align:center;font:600 15px var(--sans);color:var(--ink2);letter-spacing:1px}

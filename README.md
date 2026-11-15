@@ -69,6 +69,8 @@
 
 自动算出排名（同分按规则书并列获胜），展示 MVP、每人得分构成（航海 / 探索 / 房屋 / 牛羊 / 职业 / 财富，另列扣分）和 10 种趣味成就。终局时仍可修改玩家名，一键把整页结算生成长图，长按保存到相册。
 
+「打印」按钮（2026-11-15）生成一张 3 寸相纸（2×3 英寸）大小的结算海报，1200×1800 JPEG，用口袋照片打印机打出来贴墙：北欧维京风底图，游戏名、轮数、是否带挪威扩展、日期和房间号，所有玩家按名次排列（头像、名字、总分、得分最多的分项和扣分），第一名加大加金框。字号和留边按 `../docs/打印海报说明.md`：打印后正文不小于 40 px、名字不小于 52 px、总分不小于 90 px，重要内容离四边至少 60 px。底图是 Codex 生成的原创图（`public/img/poster.jpg`），点「打印」才加载。实现在 `public/app.js` 的 `posterHTML()` / `savePoster()`：在屏幕外排一个 600×900 的节点，用 html2canvas 按 2 倍截图。
+
 结算页最下面还有「给这款游戏打个分」：选好自己是谁（默认带出计分页选过的玩家），打 1–5 星、写一句评论，提交到[桌游小助手首页](https://boardgame.leisurecat.cloud)的统一评价接口，计入这款游戏的整体评分。评价卡不进长图；同一局再次提交会覆盖之前的评价。
 
 <p>
@@ -172,6 +174,7 @@ node tests/test_history.mjs https://你的域名/ ./shots --live              # 
 node tests/test_teach.mjs   http://localhost:8801/ ./shots                # 讲规则页：入口、每个术语的图片注释、「问」按钮、图标速查、手机宽度（模拟 /api/chat，可对线上跑）
 node tests/test_boards.mjs  http://localhost:8801/ ./shots                # 版图指南：分组、切换版图、点格子弹效果、直达链接
 node tests/test_review.mjs  http://localhost:8801/ ./shots                # 结算页评价卡（总入口接口用 page.route 拦截，不往线上写数据）
+node tests/test_poster.mjs  http://localhost:8801/ ./shots                # 「打印」海报：2 人和 4 人局各打一局，检查 1200×1800、名次、名字、总分、留边和字号，存 poster_2p.jpg / poster_4p.jpg（只对本地跑）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --no-key       # 规则助手界面（未配置密钥时）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --mock-upstream # 备用模型切换（wrangler dev 需加 --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790 --var CHAT_CF_MODEL:@cf/none/missing）
 node tests/test_chat.mjs    http://localhost:8801/ ./shots --mock-web      # 联网查找（同上的 wrangler dev 参数；和上一条隔 1 分钟跑，避开每分钟 8 问的限流）
