@@ -519,13 +519,11 @@ table.st{width:100%;border-collapse:collapse;background:rgba(255,252,243,.6);bor
 #poster .first .pp-rk{width:38px;height:38px;line-height:38px;border-radius:50%;background:var(--red);color:#fff3d6;font:900 21px var(--serif)}
 #poster .pp-por{flex:none;width:64px;height:64px;border-radius:50%;padding:4px;background:var(--c);box-shadow:0 2px 6px rgba(0,0,0,.25)}
 #poster .first .pp-por{width:76px;height:76px}
-#poster .n2 .pp-por{width:80px;height:80px}
-#poster .n2 .first .pp-por{width:92px;height:92px}
 #poster .pp-por img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
 #poster .pp-who{flex:1;min-width:0}
 #poster .pp-l1{display:flex;align-items:baseline;gap:8px}
 #poster .pp-nm{flex:1;min-width:0;font:900 27px/1.2 var(--serif);color:var(--ink);white-space:nowrap}
-#poster .pp-pt{display:flex;flex-wrap:nowrap;gap:9px;margin-top:2px;font:600 20px/1.3 var(--sans);color:var(--ink2);white-space:nowrap}
+#poster .pp-pt{display:flex;flex-wrap:nowrap;gap:7px;margin-top:2px;font:600 20px/1.3 var(--sans);color:var(--ink2);white-space:nowrap}
 #poster .pp-pt em{display:inline-block;width:11px;height:11px;margin-right:3px;border-radius:3px;vertical-align:1px}
 #poster .pp-pt b{color:var(--ink)}
 #poster .pp-pt .mn,#poster .pp-pt .mn b{color:var(--red)}

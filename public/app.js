@@ -434,14 +434,16 @@ function showImage(url, { tip = '长按图片保存到相册', file = `奥丁的
 
 /* ---------- photo poster for a 3-inch pocket printer (2×3 in): 600×900 CSS px captured at 2× = 1200×1800 ----------
    Background art: original, made with Codex (img/poster.jpg), loaded only when 「打印」 is tapped. Every player in
-   finishing order with portrait, name, total and the categories that scored most. Text sizes follow
+   finishing order with portrait, name, total, and on every row the same breakdown: the 3 categories that scored
+   most at the table plus the points lost. Text sizes follow
    docs/打印海报说明.md (at 2×: body ≥ 40 px, names ≥ 52 px, totals ≥ 90 px) and stays 30+ CSS px off the edges. */
 const shortName = n => n.length > 7 ? n.slice(0, 6) + '…' : n;
 function posterHTML(R) {
+  // every row shows the same items: the 3 categories that scored most at this table, then the points lost
+  const cats = CATS.map((c, i) => ({ ...c, i, sum: R.rows.reduce((t, r) => t + Math.max(0, r[c.k]), 0) })).sort((a, b) => b.sum - a.sum || a.i - b.i).slice(0, 3);
   const row = r => {
-    const best = CATS.map(c => ({ ...c, v: r[c.k] })).filter(c => c.v > 0).sort((a, b) => b.v - a.v);
-    const chips = (r.minus ? best.slice(0, 2) : best.slice(0, 3)).map(c => `<span><em style="background:${c.c}"></em>${c.n} <b>${c.v}</b></span>`).join('')
-      + (r.minus ? `<span class="mn">扣分 <b>−${r.minus}</b></span>` : '');
+    const chips = cats.map(c => `<span><em style="background:${c.c}"></em>${c.n} <b>${r[c.k]}</b></span>`).join('')
+      + `<span class="mn">扣分 <b>${r.minus ? '−' + r.minus : 0}</b></span>`;
     return `<div class="pp-row${r.place === 1 ? ' first' : ''}"><div class="pp-rk">${r.place === 1 ? '冠' : r.place}</div>
       <span class="pp-por" style="--c:${COLORS[r.id]}"><img src="img/${r.id}.jpg" alt=""></span>
       <div class="pp-who"><div class="pp-l1"><div class="pp-nm">${esc(shortName(pname(r.id)))}</div><div class="pp-tot">${r.total}<small>分</small></div></div>

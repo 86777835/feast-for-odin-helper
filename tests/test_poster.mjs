@@ -50,7 +50,8 @@ async function poster(label, names, nor, scores, want) {
     ['长按保存到相册，用打印机 App 选 3 寸相纸打印', `奥丁的盛宴海报-${code}.jpg`]);
   const rows = await page.$$eval('#poster .pp-row', l => l.map(r => [r.querySelector('.pp-rk').textContent, r.querySelector('.pp-nm').textContent, parseInt(r.querySelector('.pp-tot').textContent)]));
   eq(`${label}: every player, in finishing order, with the total`, rows, want);
-  eq(`${label}: game details`, (await page.$$eval('#poster .pp-s', l => l.map(x => x.textContent))).map(t => t.endsWith(`房间 ${code}`) || t), [`标准 7 轮${nor ? ' · 挪威扩展' : ''} · ${names.length} 人局`, true]);
+  eq(`${label}: every row shows the same breakdown items`, new Set(await page.$$eval('#poster .pp-pt', l => l.map(x => [...x.children].map(c => c.textContent.replace(/[−\d\s]/g, '')).join('|')))).size, 1);
+    eq(`${label}: game details`, (await page.$$eval('#poster .pp-s', l => l.map(x => x.textContent))).map(t => t.endsWith(`房间 ${code}`) || t), [`标准 7 轮${nor ? ' · 挪威扩展' : ''} · ${names.length} 人局`, true]);
   // print safety: everything that matters at least 30 CSS px (60 px printed) inside the edges, no text below the print minimum
   const fit = await page.$eval('#poster', p => {
     const box = p.getBoundingClientRect(), bad = [];
@@ -83,9 +84,9 @@ await poster('2p', ['阿斯特丽德', '比约恩'], false,
 await poster('4p', ['老张', '小李', '维京大王哈拉尔', '芙蕾雅'], true,
   [{ ship: [3, 5], emig: [18], expl: [10, 12], house: [8, 10], animal: [2, 2, 3, 6], job: [2, 3], silver: '12', mHome: '3', mExpl: '2', thing: '1' },
    { ship: [8], emig: [21], expl: [16], house: [17], animal: [4, 3], job: [1, -1, 3], silver: '7', mHome: '1' },
-   { ship: [8, 8], emig: [21, 21], expl: [16, 12], house: [17], animal: [8, 6], job: [4], silver: '15', thing: '2' },
+   { ship: [8, 8, 8, 8], emig: [21, 21, 21, 21], expl: [16, 12], house: [17], animal: [8, 6], job: [4], silver: '15', thing: '2' },   // widest row: 3-digit total and category
    { ship: [3], emig: [18], expl: [8], house: [10], animal: [2], job: [2], silver: '5', mHome: '6', thing: '3' }],
-  [['冠', '维京大王哈拉尔', 130], ['2', '老张', 88], ['3', '小李', 78], ['4', '芙蕾雅', 33]]);
+  [['冠', '维京大王哈拉尔', 188], ['2', '老张', 88], ['3', '小李', 78], ['4', '芙蕾雅', 33]]);
 eq('no page errors', errs, []);
 await b.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);
